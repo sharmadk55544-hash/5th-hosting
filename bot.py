@@ -160,13 +160,48 @@ PE_DIAMOND = PREMIUM_EMOJI_IDS[19]
 PE_BOT = PREMIUM_EMOJI_IDS[20]
 
 
+def custom_emoji_enabled():
+    """Premium emojis are ON by default. Only an explicit 0/false/no/off disables them."""
+    return os.getenv('ENABLE_CUSTOM_EMOJI', '1').strip().lower() not in ('0', 'false', 'no', 'off')
+
+
 def pe(emoji_id, fallback="💎"):
     """
-    Telegram custom premium emoji HTML.
+    Telegram custom premium emoji HTML (<tg-emoji>) with a normal-emoji fallback.
     """
-    if os.getenv('ENABLE_CUSTOM_EMOJI', '0') != '1':
+    emoji_id = str(emoji_id).strip()
+    if not emoji_id.isdigit() or not custom_emoji_enabled():
         return fallback
     return f'<tg-emoji emoji-id="{emoji_id}">{fallback}</tg-emoji>'
+
+
+# Unicode emoji -> custom emoji ID. Used by decorate_emojis() so that EVERY outgoing
+# HTML message (old and new code paths) gets real custom emoji entities, not only
+# the strings that call pe() by hand. IDs are the ones already defined above.
+CUSTOM_EMOJI_MAP = {
+    "🔥": PE_FIRE, "⭐": PE_STAR, "🚀": PE_ROCKET, "👑": PE_CROWN, "🛡": PE_SHIELD,
+    "💰": PE_MONEY, "📱": PE_PHONE, "✅": PE_CHECK, "❌": PE_CROSS, "⚠": PE_WARNING,
+    "🔒": PE_LOCK, "🎁": PE_GIFT, "👤": PE_USER, "📤": PE_UPLOAD, "📁": PE_FOLDER,
+    "⚙": PE_SETTINGS, "🖥": PE_SERVER, "💎": PE_DIAMOND, "🤖": PE_BOT,
+}
+_EMOJI_RE = re.compile(
+    r'(<tg-emoji\b.*?</tg-emoji>|<pre>.*?</pre>|<code>.*?</code>)|('
+    + '|'.join(re.escape(k) + '\ufe0f?' for k in sorted(CUSTOM_EMOJI_MAP, key=len, reverse=True))
+    + ')', re.S)
+
+
+def decorate_emojis(text):
+    """Turn known Unicode emojis in an HTML message into custom emoji entities."""
+    if not isinstance(text, str) or not custom_emoji_enabled():
+        return text
+    if len(_EMOJI_RE.findall(text)) > 90:      # Telegram allows 100 entities per message
+        return text
+
+    def swap(m):
+        if m.group(1):
+            return m.group(1)
+        return pe(CUSTOM_EMOJI_MAP[m.group(2).replace('\ufe0f', '')], m.group(2))
+    return _EMOJI_RE.sub(swap, text)
 
 
 def safe_html(value):
@@ -5429,6 +5464,11 @@ def backup_database(send=False):
             telegram(bot.send_document, OWNER_ID, stream, caption='Daily database backup. Store securely: contains user settings.')
     return dest
 
+# name, price in paise, days, bot slots, description, emoji
+DEFAULT_PLANS = [('Weekly Plan',4900,7,5,'7 days of premium hosting','💎'),
+                 ('Monthly Plan',9900,30,10,'30 days of premium hosting','👑')]
+UPI_RE = re.compile(r'[A-Za-z0-9._-]{2,64}@[A-Za-z][A-Za-z0-9.-]{1,30}')
+
 def init_premium_db():
     if os.path.exists(DB_PATH):
         backup_database()
@@ -5485,6 +5525,11 @@ def init_premium_db():
                 con.execute('INSERT OR IGNORE INTO users(id,legacy_json,bot_limit,banned) VALUES (?,?,?,?)',
                             (uid,json.dumps(data,ensure_ascii=False),int(defaults['free_limit']),int(data.get('rejected',False))))
             con.execute("INSERT INTO settings VALUES ('legacy_imported','1')")
+        if not con.execute("SELECT 1 FROM settings WHERE key='default_plans_seeded'").fetchone():
+            if not con.execute('SELECT 1 FROM plans').fetchone():
+                con.executemany('INSERT INTO plans(name,price,duration_days,bot_limit,description,emoji,active,max_upload_mb) '
+                                'VALUES (?,?,?,?,?,?,1,20)', DEFAULT_PLANS)
+            con.execute("INSERT INTO settings VALUES ('default_plans_seeded','1')")
         con.execute('PRAGMA user_version=1')
 
 init_premium_db()
@@ -5548,10 +5593,6 @@ def telegram(method, *args, **kwargs):
             text = str(exc).lower()
             if 'message is not modified' in text:
                 return None
-            if code == 400 and 'tg-emoji' in str(kwargs):
-                kwargs = {k:re.sub(r'<tg-emoji[^>]*>(.*?)</tg-emoji>',r'\1',v) if isinstance(v,str) else v for k,v in kwargs.items()}
-                args = tuple(re.sub(r'<tg-emoji[^>]*>(.*?)</tg-emoji>',r'\1',v) if isinstance(v,str) else v for v in args)
-                continue
             if code in (400,401,403,409) or attempt == 2:
                 raise
             if STOP_EVENT.wait(2**attempt):
@@ -5568,12 +5609,74 @@ def notify(chat,text,markup=None):
         LOG.exception('Notification failed for chat %s',chat)
 
 def premium_icon():
-    return pe(CUSTOM_EMOJI_ID,'💎') if CUSTOM_EMOJI_ID.isdigit() else '💎'
+    return pe(CUSTOM_EMOJI_ID or PE_DIAMOND,'💎')
 
-def keyboard(*items, back='s:home'):
-    layout = [[InlineKeyboardButton(label,callback_data=data)] for label,data in items]
+# ---- Premium emoji send layer -------------------------------------------------
+# Wraps send_message / edit_message_text ONCE so every HTML message in the whole
+# bot (legacy handlers included) is decorated, and so a rejected custom emoji
+# degrades to plain emoji instead of losing the message.
+EMOJI_STATS = {'sent':0,'rejected':0,'last_error':''}
+_TG_EMOJI_TAG = re.compile(r'<tg-emoji[^>]*>(.*?)</tg-emoji>', re.S)
+RAW_SEND_MESSAGE = bot.send_message
+
+def strip_custom_emoji(value):
+    return _TG_EMOJI_TAG.sub(r'\1', value) if isinstance(value,str) else value
+
+def _install_emoji_layer():
+    def make(original, text_pos):
+        @functools.wraps(original)
+        def wrapper(*args, **kwargs):
+            args = list(args)
+            if kwargs.get('parse_mode') == 'HTML':
+                if 'text' in kwargs:
+                    kwargs['text'] = decorate_emojis(kwargs['text'])
+                elif len(args) > text_pos:
+                    args[text_pos] = decorate_emojis(args[text_pos])
+            used = '<tg-emoji' in repr((args, kwargs))
+            try:
+                result = original(*args, **kwargs)
+                if used:
+                    EMOJI_STATS['sent'] += 1
+                return result
+            except Exception as exc:
+                if (used and getattr(exc,'error_code',0) == 400
+                        and 'not modified' not in str(exc).lower()):
+                    EMOJI_STATS['rejected'] += 1
+                    EMOJI_STATS['last_error'] = str(exc)[:300]
+                    LOG.warning('Custom emoji rejected by Telegram, resending with plain emoji: %s', exc)
+                    return original(*[strip_custom_emoji(a) for a in args],
+                                    **{k:strip_custom_emoji(v) for k,v in kwargs.items()})
+                raise
+        wrapper._emoji_layer = True
+        return wrapper
+    for name, pos in (('send_message',1),('edit_message_text',0)):
+        current = getattr(bot, name)
+        if not getattr(current, '_emoji_layer', False):
+            setattr(bot, name, make(current, pos))
+
+_install_emoji_layer()
+
+def emoji_self_test(uid):
+    """Owner command /emojitest: sends every configured custom emoji and reports what Telegram said."""
+    sample = ' '.join(pe(i,'•') for i in PREMIUM_EMOJI_IDS)
+    try:
+        RAW_SEND_MESSAGE(uid, '🧪 <b>Custom emoji test</b>\n'+sample, parse_mode='HTML')
+        say(uid, ('✅ Telegram accepted the custom emoji entities.\n'
+                  'If the line above shows plain emojis instead of premium ones, Telegram is accepting but not '
+                  'rendering them for this bot (see deployment notes).\n'
+                  f'Sent with custom emoji: {EMOJI_STATS["sent"]} / rejected: {EMOJI_STATS["rejected"]}\n'
+                  f'ENABLE_CUSTOM_EMOJI active: {custom_emoji_enabled()}'))
+    except Exception as exc:
+        say(uid, '⚠️ Telegram rejected the custom emoji message:\n<code>'+safe_html(str(exc)[:500])+'</code>')
+
+def keyboard(*items, back='s:home', columns=2):
+    buttons = [InlineKeyboardButton(label,callback_data=data) for label,data in items]
+    layout = [buttons[i:i+columns] for i in range(0,len(buttons),columns)]
     if back:
-        layout.append([InlineKeyboardButton('⬅️ BACK',callback_data=back)])
+        nav = [InlineKeyboardButton('🔙 Back',callback_data=back)]
+        if back != 's:home':
+            nav.append(InlineKeyboardButton('🏠 Main Menu',callback_data='s:home'))
+        layout.append(nav)
     return InlineKeyboardMarkup(layout)
 
 def screen(call,text,markup):
@@ -6317,10 +6420,10 @@ def package_install(r,uid):
 # Owner management: validated JSON forms allow every plan property to be edited
 # without code changes, with explicit field names shown in the bot.
 def manager(call):
-    items = [('💳 Payment settings','s:settings'),('💎 Manage plans','s:manageplans'),
+    items = [('💳 UPI ID Settings','s:upi'),('💎 Manage plans','s:manageplans'),
              ('📋 Pending orders','s:orders:pending'),('✅ Approved orders','s:orders:approved'),
              ('❌ Rejected orders','s:orders:rejected'),('📈 Revenue statistics','s:revenue'),
-             ('🎁 Give / remove subscription','s:gift'),('📢 Targeted broadcast','s:broadcast'),
+             ('🎁 Give / Remove Sub','s:gift'),('📢 Targeted broadcast','s:broadcast'),
              ('🚫 Ban / unban','s:ban'),('📋 Ban list','s:banlist'),
              ('💾 Database backup','s:backup'),('⚙️ Service settings','s:settings')]
     screen(call,'💎 <b>Subscription Manager</b>\nAmounts are stored as integer paise; all dates use UTC.',keyboard(*items,back='owner_home'))
@@ -6376,6 +6479,35 @@ def revenue_text():
     text += f'Active subscribers: {count}\nServer CPU: {psutil.cpu_percent()}%\nRAM: {psutil.virtual_memory().percent}%\nDisk: {psutil.disk_usage(STORAGE_DIR).percent}%'
     return text
 
+def plan_row(pid):
+    found = rows('SELECT * FROM plans WHERE id=?',(pid,))
+    if not found:
+        raise ValueError('Plan not found.')
+    return found[0]
+
+def parse_price_paise(text):
+    try:
+        amount = Decimal(text.replace('₹','').replace(',','').strip())
+    except InvalidOperation:
+        raise ValueError('Send the price as a number, for example 49.') from None
+    if not amount.is_finite() or amount<=0 or amount>1000000 or amount*100 != (amount*100).to_integral_value():
+        raise ValueError('Price must be positive with at most 2 decimal places.')
+    return int(amount*100)
+
+def parse_days(text):
+    text = text.strip()
+    if not text.isdigit() or not 1<=int(text)<=3650:
+        raise ValueError('Send a whole number of days between 1 and 3650.')
+    return int(text)
+
+def give_confirm(uid,target,days):
+    u = premium_user(target)
+    now = time.time()
+    current = f'{u["plan"]} until {stamp(u["plan_expiry"])}' if u['plan'] and u['plan_expiry']>now else 'No active subscription'
+    set_state(uid,'give_confirm',target=target,days=days)
+    say(uid,f'🎁 <b>Confirm</b>\nUser: <code>{target}</code>\nCurrent: {safe_html(current)}\nAdd: {days} days',
+        keyboard(('✅ Confirm','s:gconfirm'),('❌ Cancel','s:gift'),back=None))
+
 def handle_admin_input(message,state):
     uid = message.from_user.id
     mode = state['mode']
@@ -6400,6 +6532,67 @@ def handle_admin_input(message,state):
                 if rows('SELECT COUNT(*) n FROM plans WHERE active=1')[0]['n']>=10:
                     raise ValueError('Keep at most 10 active plans for readable Telegram screens.')
                 execute('INSERT INTO plans('+','.join(columns)+') VALUES ('+','.join('?' for _ in columns)+')',tuple(data.values()))
+        elif mode=='upi':
+            value = text.strip()
+            if not UPI_RE.fullmatch(value):
+                raise ValueError('Invalid UPI ID. Use the format name@bank, for example yourname@upi. Send /cancel to stop.')
+            execute('INSERT INTO settings VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value',('upi_id',value))
+            clear_state(uid)
+            say(uid,'✅ <b>UPI ID Updated Successfully!</b>\n\nYour new UPI ID:\n<code>'+safe_html(value)+'</code>',keyboard(back='s:upi'))
+            return
+        elif mode=='np_name':
+            name = text.strip()
+            if not 1<=len(name)<=60:
+                raise ValueError('Plan name must be 1 to 60 characters.')
+            set_state(uid,'np_price',name=name)
+            say(uid,'💰 <b>Enter Plan Price in INR</b>\nExample: <code>49</code>',keyboard(('❌ Cancel','s:manageplans'),back=None))
+            return
+        elif mode in ('np_price','ep_price'):
+            price = parse_price_paise(text)
+            if mode=='ep_price':
+                plan_row(state['pid'])
+                execute('UPDATE plans SET price=? WHERE id=?',(price,state['pid']))
+                clear_state(uid)
+                say(uid,f'✅ Price updated to ₹{money(price)}.',keyboard(back=f's:editplan:{state["pid"]}'))
+                return
+            set_state(uid,'np_days',name=state['name'],price=price)
+            say(uid,'⏳ <b>Enter Plan Duration in Days</b>\nExample: <code>7</code>',keyboard(('❌ Cancel','s:manageplans'),back=None))
+            return
+        elif mode in ('np_days','ep_days'):
+            days = parse_days(text)
+            if mode=='ep_days':
+                plan_row(state['pid'])
+                execute('UPDATE plans SET duration_days=? WHERE id=?',(days,state['pid']))
+                clear_state(uid)
+                say(uid,f'✅ Duration updated to {days} days.',keyboard(back=f's:editplan:{state["pid"]}'))
+                return
+            set_state(uid,'plan_confirm',plan={'name':state['name'],'price':state['price'],'days':days})
+            say(uid,f'💎 <b>Plan Preview</b>\n\nPlan: {safe_html(state["name"])}\nPrice: ₹{money(state["price"])}\nDuration: {days} Days\n\nSave this plan?',
+                keyboard(('✅ Save Plan','s:plan_save'),('✏️ Edit','s:plan_edit_again'),('❌ Cancel','s:manageplans'),back=None))
+            return
+        elif mode=='give_uid':
+            target = int(text)
+            if target<=0:
+                raise ValueError('Send a valid numeric Telegram User ID.')
+            ensure_user(target)
+            set_state(uid,'give_pick',target=target)
+            say(uid,f'🎁 <b>Choose duration</b> for <code>{target}</code>',
+                keyboard(('7 Days','s:gd:7'),('30 Days','s:gd:30'),('90 Days','s:gd:90'),('Custom Days','s:gd:c'),('❌ Cancel','s:gift'),back=None))
+            return
+        elif mode=='give_days':
+            give_confirm(uid,state['target'],parse_days(text))
+            return
+        elif mode=='rem_uid':
+            target = int(text)
+            if target<=0:
+                raise ValueError('Send a valid numeric Telegram User ID.')
+            u = premium_user(target)
+            now = time.time()
+            status = f'{u["plan"]} until {stamp(u["plan_expiry"])}' if u['plan'] and u['plan_expiry']>now else 'No active subscription'
+            set_state(uid,'rem_confirm',target=target)
+            say(uid,f'➖ <b>Remove subscription?</b>\nUser: <code>{target}</code>\nStatus: {safe_html(status)}',
+                keyboard(('🗑 Confirm Remove','s:gremove'),('❌ Cancel','s:gift'),back=None))
+            return
         elif mode=='settings':
             values = json.loads(text)
             allowed = {'upi_id','payee_name','subscription_on','free_limit','free_upload_mb','info_text','support','maintenance','maintenance_text','force_join'}
@@ -6486,7 +6679,9 @@ def subscription_callback(call):
     action = bits[1]
     arg = bits[2] if len(bits)>2 else ''
     if action in ('manager','settings','manageplans','editplan','addplan','toggleplan','deleteplan','confirmdeleteplan',
-                  'gift','ban','banlist','broadcast','bcsend','revenue','backup') and uid!=OWNER_ID:
+                  'gift','ban','banlist','broadcast','bcsend','revenue','backup','upi','upi_set','upi_remove','upi_clear',
+                  'planjson','plan_price','plan_days','plan_save','plan_edit_again','plan_defaults',
+                  'gift_give','gift_remove','gd','gconfirm','gremove') and uid!=OWNER_ID:
         raise ValueError('Owner access required.')
     if action in ('approve','reject','review','orders','replyticket') and uid not in ADMIN_IDS:
         raise ValueError('Admin access required.')
@@ -6556,28 +6751,125 @@ def subscription_callback(call):
     elif action=='manager':
         manager(call)
     elif action=='settings':
-        values = {r['key']:r['value'] for r in rows("SELECT * FROM settings WHERE key!='legacy_imported'")}
+        values = {r['key']:r['value'] for r in rows("SELECT * FROM settings WHERE key NOT IN ('legacy_imported','default_plans_seeded')")}
         set_state(uid,'settings')
-        screen(call,'Send a JSON object with settings to change. Booleans use "0" / "1".\n<pre>'+safe_html(json.dumps(values,ensure_ascii=False,indent=2))+'</pre>',keyboard(back='s:manager'))
+        screen(call,'⚙️ <b>Service Settings (advanced)</b>\nSend a JSON object with settings to change. Booleans use "0" / "1".\n<pre>'+safe_html(json.dumps(values,ensure_ascii=False,indent=2))+'</pre>',keyboard(back='s:manager'))
+    elif action=='upi':
+        clear_state(uid)
+        current = setting('upi_id')
+        shown = f'<code>{safe_html(current)}</code>' if current else '<i>Not set yet</i>'
+        screen(call,f'💳 <b>UPI ID Settings</b>\n━━━━━━━━━━━━━━━━\nCurrent UPI ID:\n{shown}',
+               keyboard(('✏️ Change UPI ID','s:upi_set'),('🗑 Remove UPI ID','s:upi_remove'),back='s:manager'))
+    elif action=='upi_set':
+        set_state(uid,'upi')
+        screen(call,'💳 <b>UPI ID Settings</b>\n\nPlease send your UPI ID.\n\nExample:\n<code>yourname@upi</code>\n\nSend /cancel to cancel.',
+               keyboard(('❌ Cancel','s:upi'),back=None))
+    elif action=='upi_remove':
+        screen(call,'🗑 <b>Remove UPI ID?</b>\nUsers will not be able to pay until a new UPI ID is set.',
+               keyboard(('🗑 Yes, Remove','s:upi_clear'),('❌ Cancel','s:upi'),back=None))
+    elif action=='upi_clear':
+        execute('INSERT INTO settings VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value',('upi_id',''))
+        screen(call,'✅ UPI ID removed.',keyboard(back='s:upi'))
     elif action=='manageplans':
-        items = [('➕ Add plan','s:addplan')]
-        items += [(f'{p["id"]} {p["name"]} ({"ON" if p["active"] else "OFF"})',f's:editplan:{p["id"]}') for p in rows('SELECT * FROM plans ORDER BY id LIMIT 40')]
-        screen(call,'💎 <b>Manage plans</b>',keyboard(*items,back='s:manager'))
-    elif action in ('addplan','editplan'):
-        plan_form(call,int(arg) if arg else 0)
-        if arg:
-            say(uid,'Other plan actions:',keyboard(('🔄 Enable / disable',f's:toggleplan:{arg}'),('🗑 Delete',f's:deleteplan:{arg}'),back='s:manageplans'))
+        clear_state(uid)
+        plans = rows('SELECT * FROM plans ORDER BY price,id LIMIT 40')
+        lines = [f'{"🟢" if p["active"] else "🔴"} <b>{safe_html(p["name"])}</b> - ₹{money(p["price"])} / {p["duration_days"]} days' for p in plans]
+        text = '💎 <b>Manage Plans</b>\n━━━━━━━━━━━━━━━━\n'+('\n'.join(lines) if lines else 'No plans yet.')
+        items = [('➕ Add Plan','s:addplan'),('♻️ Restore Defaults','s:plan_defaults')]
+        items += [(f'✏️ {p["name"][:22]}',f's:editplan:{p["id"]}') for p in plans]
+        screen(call,text,keyboard(*items,back='s:manager'))
+    elif action=='plan_defaults':
+        added = 0
+        for name,price,days,limit,desc,emoji in DEFAULT_PLANS:
+            if not rows('SELECT 1 FROM plans WHERE name=? AND price=? AND duration_days=?',(name,price,days)):
+                execute('INSERT INTO plans(name,price,duration_days,bot_limit,description,emoji,active,max_upload_mb) VALUES (?,?,?,?,?,?,1,20)',
+                        (name,price,days,limit,desc,emoji))
+                added += 1
+        screen(call,f'✅ Default plans restored. Added: {added}.',keyboard(back='s:manageplans'))
+    elif action=='addplan':
+        set_state(uid,'np_name')
+        screen(call,'💎 <b>Enter Plan Name</b>\n\nExample: <code>Premium Weekly</code>\n\nSend /cancel to cancel.',
+               keyboard(('❌ Cancel','s:manageplans'),back=None))
+    elif action=='plan_edit_again':
+        set_state(uid,'np_name')
+        screen(call,'✏️ <b>Enter Plan Name</b>\n\nSend /cancel to cancel.',keyboard(('❌ Cancel','s:manageplans'),back=None))
+    elif action=='plan_save':
+        state = UI_STATE.get(uid,{})
+        if state.get('mode')!='plan_confirm':
+            raise ValueError('No plan is waiting to be saved.')
+        if rows('SELECT COUNT(*) n FROM plans WHERE active=1')[0]['n']>=10:
+            raise ValueError('Keep at most 10 active plans for readable Telegram screens.')
+        p = state['plan']
+        execute('INSERT INTO plans(name,price,duration_days,bot_limit,description,emoji,active,max_upload_mb) VALUES (?,?,?,5,?,?,1,20)',
+                (p['name'],p['price'],p['days'],f'{p["days"]} days of premium hosting','💎'))
+        clear_state(uid)
+        screen(call,'✅ <b>Plan saved!</b>',keyboard(back='s:manageplans'))
+    elif action=='editplan':
+        clear_state(uid)
+        p = plan_row(int(arg))
+        screen(call,f'✏️ <b>{safe_html(p["name"])}</b>\nPrice: ₹{money(p["price"])}\nDuration: {p["duration_days"]} days\nStatus: {"Enabled" if p["active"] else "Disabled"}',
+               keyboard(('💰 Change Price',f's:plan_price:{arg}'),('⏳ Change Duration',f's:plan_days:{arg}'),
+                        ('🔄 Enable / Disable',f's:toggleplan:{arg}'),('🗑 Delete',f's:deleteplan:{arg}'),
+                        ('⚙️ Advanced',f's:planjson:{arg}'),back='s:manageplans'))
+    elif action=='planjson':
+        plan_form(call,int(arg))
+    elif action in ('plan_price','plan_days'):
+        plan_row(int(arg))
+        set_state(uid,'ep_'+action[5:],pid=int(arg))
+        prompt = '💰 <b>Enter the new price in INR</b>\nExample: <code>49</code>' if action=='plan_price' else '⏳ <b>Enter the new duration in days</b>\nExample: <code>7</code>'
+        screen(call,prompt+'\n\nSend /cancel to cancel.',keyboard(('❌ Cancel',f's:editplan:{arg}'),back=None))
     elif action=='toggleplan':
         execute('UPDATE plans SET active=1-active WHERE id=?',(int(arg),))
-        screen(call,'Plan availability changed.',keyboard(back='s:manageplans'))
+        screen(call,'✅ Plan availability changed.',keyboard(back='s:manageplans'))
     elif action=='deleteplan':
-        screen(call,'Delete this plan? Existing orders retain their purchase details.',keyboard(('🗑 CONFIRM DELETE',f's:confirmdeleteplan:{arg}'),back='s:manageplans'))
+        screen(call,'🗑 <b>Delete this plan?</b>\nExisting orders keep their purchase details; current subscribers keep their time.',keyboard(('🗑 Confirm Delete',f's:confirmdeleteplan:{arg}'),('❌ Cancel',f's:editplan:{arg}'),back=None))
     elif action=='confirmdeleteplan':
         execute('DELETE FROM plans WHERE id=?',(int(arg),))
-        screen(call,'Plan deleted.',keyboard(back='s:manageplans'))
+        screen(call,'✅ Plan deleted.',keyboard(back='s:manageplans'))
     elif action=='gift':
-        set_state(uid,'gift')
-        screen(call,'Send USER_ID PLAN_ID. Use PLAN_ID 0 to remove a subscription. Existing active time is extended when giving a plan.',keyboard(back='s:manager'))
+        clear_state(uid)
+        screen(call,'🎁 <b>Give / Remove Subscription</b>',
+               keyboard(('🎁 Give Subscription','s:gift_give'),('➖ Remove Subscription','s:gift_remove'),back='s:manager'))
+    elif action in ('gift_give','gift_remove'):
+        set_state(uid,'give_uid' if action=='gift_give' else 'rem_uid')
+        screen(call,'👤 <b>Send the Telegram User ID.</b>\n\nSend /cancel to cancel.',keyboard(('❌ Cancel','s:gift'),back=None))
+    elif action=='gd':
+        state = UI_STATE.get(uid,{})
+        if state.get('mode')!='give_pick':
+            raise ValueError('Start again from Give Subscription.')
+        if arg=='c':
+            set_state(uid,'give_days',target=state['target'])
+            screen(call,'⏳ <b>Enter the number of days.</b>\nExample: <code>15</code>',keyboard(('❌ Cancel','s:gift'),back=None))
+        else:
+            if arg not in ('7','30','90'):
+                raise ValueError('Invalid duration.')
+            give_confirm(uid,state['target'],int(arg))
+    elif action=='gconfirm':
+        state = UI_STATE.get(uid,{})
+        if state.get('mode')!='give_confirm':
+            raise ValueError('Nothing to confirm.')
+        target,days = state['target'],state['days']
+        clear_state(uid)
+        u = premium_user(target)
+        now = time.time()
+        active = bool(u['plan']) and u['plan_expiry']>now
+        caps = rows('SELECT COALESCE(MAX(bot_limit),5) b, COALESCE(MAX(max_upload_mb),20) m FROM plans')[0]
+        expiry = max(now,u['plan_expiry'])+days*86400
+        execute('UPDATE users SET plan=?,plan_expiry=?,bot_limit=MAX(bot_limit,?),max_upload_mb=MAX(max_upload_mb,?),reminded=0 WHERE id=?',
+                (u['plan'] if active else 'Gifted',expiry,caps['b'],caps['m'],target))
+        enforce_limit(target)
+        notify(target,f'🎁 <b>You received a subscription!</b>\nAdded: {days} days\nExpires: {stamp(expiry)}')
+        screen(call,f'✅ <b>Subscription given</b>\nUser: <code>{target}</code>\nDays: {days}\nExpires: {stamp(expiry)}',keyboard(back='s:gift'))
+    elif action=='gremove':
+        state = UI_STATE.get(uid,{})
+        if state.get('mode')!='rem_confirm':
+            raise ValueError('Nothing to confirm.')
+        target = state['target']
+        clear_state(uid)
+        execute('UPDATE users SET plan=NULL,plan_expiry=0,reminded=0 WHERE id=?',(target,))
+        enforce_limit(target)
+        notify(target,'ℹ️ Your subscription was removed by the owner. Free limits now apply; your files were kept.')
+        screen(call,f'✅ Subscription removed for <code>{target}</code>.',keyboard(back='s:gift'))
     elif action=='ban':
         set_state(uid,'ban')
         screen(call,'Send ban USER_ID or unban USER_ID.',keyboard(back='s:manager'))
@@ -6781,6 +7073,9 @@ def premium_text(message):
             execute("UPDATE orders SET status='cancelled' WHERE id=? AND status='pending'",(o['id'],))
         clear_state(uid)
         say(uid,'Cancelled. Real payments are not reversed.',control_buttons(uid))
+        return
+    if text=='/emojitest' and uid==OWNER_ID:
+        emoji_self_test(uid)
         return
     if text in ('💎 Subscription','📊 My Subscription','🆘 Support'):
         if text.startswith('💎') and setting('subscription_on')!='1':
