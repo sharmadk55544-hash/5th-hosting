@@ -27,8 +27,8 @@ from telebot.types import (
 # BOT CONFIG
 # ============================================================
 
-BOT_TOKEN = os.getenv("BOT_TOKEN", "").strip()
-OWNER_ID = int(os.getenv("OWNER_ID", "8753914631"))
+BOT_TOKEN = os.getenv("BOT_TOKEN", "8823229372:AAGy2B_YXXE74JbZJGhhUFM35Mdw0wPVQqc").strip()
+OWNER_ID = int(os.getenv("OWNER_ID", "8675132585"))
 
 STORAGE_DIR = "user_files"
 UPLOAD_DIR = os.path.join(STORAGE_DIR, "uplo556ads")
@@ -856,7 +856,11 @@ def run_script_thread(
             saved = dict(saved)
 
         child_env.update(
-            {str(k): str(v) for k, v in saved.items()}
+            {
+                str(k): str(v)
+                for k, v in saved.items()
+                if str(v).strip() != BOT_TOKEN
+            }
         )
 
         with get_script_lock(user_id, file_path):
@@ -1194,15 +1198,14 @@ def control_buttons(uid=None):
         KeyboardButton("🚀 𝐒𝐭𝐚𝐭ᴜѕ")
     )
 
-    markup.row(
-        KeyboardButton(
-            "⚙️ Recommended Install"
-        )
-    )
-
     if uid is not None and uid == OWNER_ID:
         markup.row(
+            KeyboardButton("⚙️ Recommended Install"),
             KeyboardButton("👑 Owner Panel")
+        )
+    else:
+        markup.row(
+            KeyboardButton("⚙️ Recommended Install")
         )
 
     return markup
@@ -1251,35 +1254,29 @@ def env_menu_markup(filename):
             InlineKeyboardButton(
                 "🤖 Set BOT_TOKEN",
                 callback_data=f"setenv_BOT_TOKEN_{filename}"
-            )
-        ],
-        [
+            ),
             InlineKeyboardButton(
-                "👑 Set ADMIN_ID / OWNER_ID",
+                "👑 Set ADMIN_ID",
                 callback_data=f"setenv_ADMIN_ID_{filename}"
             )
         ],
         [
             InlineKeyboardButton(
-                "🔑 Set API_ID & API_HASH",
+                "🔑 API_ID & HASH",
                 callback_data=f"setenv_API_{filename}"
-            )
-        ],
-        [
+            ),
             InlineKeyboardButton(
-                "➕ Add Custom Variable (KEY=VALUE)",
+                "➕ Custom ENV",
                 callback_data=f"setenv_CUSTOM_{filename}"
             )
         ],
         [
             InlineKeyboardButton(
-                "🗑 Clear .env Variables",
+                "🗑 Clear .env",
                 callback_data=f"clearenv_{filename}"
-            )
-        ],
-        [
+            ),
             InlineKeyboardButton(
-                "🚀 Save & Run Bot",
+                "🚀 Save & Run",
                 callback_data=f"skiprun_{filename}"
             )
         ],
@@ -1411,6 +1408,9 @@ def handle_env_input(message, state):
 
         if not re.match(r"^\d+:[A-Za-z0-9_-]{20,}$", text):
             return fail("Invalid BOT_TOKEN format")
+
+        if text.strip() == BOT_TOKEN:
+            return fail("Cannot use the Hosting Bot's own BOT_TOKEN! Please use a separate bot token from @BotFather.")
 
         new_vars = {"BOT_TOKEN": text}
 
@@ -1635,13 +1635,11 @@ def pkg_menu_markup():
     return InlineKeyboardMarkup([
         [
             InlineKeyboardButton(
-                "✍️ Manual Package Install (Type Name)",
+                "✍️ Manual Install",
                 callback_data="manual_pkg_input"
-            )
-        ],
-        [
+            ),
             InlineKeyboardButton(
-                "📋 Choose from Recommended List",
+                "📋 Recommended List",
                 callback_data="rec_pkg_list"
             )
         ]
@@ -1685,10 +1683,7 @@ def rec_list_markup():
         InlineKeyboardButton(
             "📦 pytgcalls (GitHub)",
             callback_data="recpkg_pytgcalls"
-        )
-    ])
-
-    rows.append([
+        ),
         InlineKeyboardButton(
             "⬅ Back",
             callback_data="pkg_menu"
@@ -1812,13 +1807,11 @@ def req_buttons(rel):
     return InlineKeyboardMarkup([
         [
             InlineKeyboardButton(
-                "📦 Install requirements.txt",
+                "📦 Install All",
                 callback_data=f"reqinstall_{rel}"
-            )
-        ],
-        [
+            ),
             InlineKeyboardButton(
-                "☑️ Select Packages from File",
+                "☑️ Select Packages",
                 callback_data=f"reqselect_{rel}"
             )
         ],
@@ -1992,23 +1985,19 @@ def owner_markup():
             InlineKeyboardButton(
                 "👥 Manage Users",
                 callback_data="owner_users"
-            )
-        ],
-        [
+            ),
             InlineKeyboardButton(
-                "🟢 All Running Scripts",
+                "🟢 Running Scripts",
                 callback_data="owner_running"
             )
         ],
         [
             InlineKeyboardButton(
-                "📢 Broadcast Message",
+                "📢 Broadcast",
                 callback_data="owner_broadcast"
-            )
-        ],
-        [
+            ),
             InlineKeyboardButton(
-                "🖥 Server & Storage Cleanup",
+                "🖥 Server Cleanup",
                 callback_data="owner_cleanup"
             )
         ],
@@ -2079,10 +2068,11 @@ def owner_users_view():
     )
 
     rows = []
+    pair = []
 
     for u_id, u in ordered[:90]:
 
-        name = str(u.get("name") or "")[:18]
+        name = str(u.get("name") or "")[:10]
 
         label = (
             f"{user_status_icon(u_id)} {u_id} "
@@ -2092,12 +2082,18 @@ def owner_users_view():
         if name:
             label += f" • {name}"
 
-        rows.append([
+        pair.append(
             InlineKeyboardButton(
                 label,
                 callback_data=f"owner_user_{u_id}"
             )
-        ])
+        )
+        if len(pair) == 2:
+            rows.append(pair)
+            pair = []
+
+    if pair:
+        rows.append(pair)
 
     rows.append([
         InlineKeyboardButton(
@@ -2155,27 +2151,22 @@ def owner_user_view(target):
 
     if target != OWNER_ID:
 
-        if u.get("approved"):
-
-            rows.append([
-                InlineKeyboardButton(
-                    "❌ Ban (Unapprove)",
-                    callback_data=f"owner_ban_{target}"
-                )
-            ])
-
-        else:
-
-            rows.append([
-                InlineKeyboardButton(
-                    "✅ Approve",
-                    callback_data=f"owner_appr_{target}"
-                )
-            ])
+        status_btn = (
+            InlineKeyboardButton(
+                "❌ Ban User",
+                callback_data=f"owner_ban_{target}"
+            )
+            if u.get("approved")
+            else InlineKeyboardButton(
+                "✅ Approve",
+                callback_data=f"owner_appr_{target}"
+            )
+        )
 
         rows.append([
+            status_btn,
             InlineKeyboardButton(
-                "📈 Change File Limit",
+                "📈 Set File Limit",
                 callback_data=f"owner_setlim_{target}"
             )
         ])
@@ -2204,12 +2195,9 @@ def owner_user_view(target):
 
     rows.append([
         InlineKeyboardButton(
-            "📁 View User Files",
+            "📁 User Files",
             callback_data=f"owner_files_{target}"
-        )
-    ])
-
-    rows.append([
+        ),
         InlineKeyboardButton(
             "⬅ Back",
             callback_data="owner_users"
@@ -2272,6 +2260,7 @@ def owner_running_view():
     lines = []
     rows = []
 
+    pair = []
     for i, (u_id, p) in enumerate(owner_run_cache[:40]):
 
         base = os.path.basename(p)
@@ -2281,12 +2270,18 @@ def owner_running_view():
             f"<code>{safe_html(base)}</code>"
         )
 
-        rows.append([
+        pair.append(
             InlineKeyboardButton(
-                f"⏹ Force Stop • {u_id} • {base[:20]}",
+                f"⏹ {u_id}•{base[:12]}",
                 callback_data=f"owner_fstop_{i}"
             )
-        ])
+        )
+        if len(pair) == 2:
+            rows.append(pair)
+            pair = []
+
+    if pair:
+        rows.append(pair)
 
     body = "\n".join(lines) or "No scripts running."
 
@@ -2419,9 +2414,7 @@ def owner_cleanup_view(prefix=""):
             InlineKeyboardButton(
                 "🧽 Clear Stale Logs",
                 callback_data="owner_clr_stale"
-            )
-        ],
-        [
+            ),
             InlineKeyboardButton(
                 "🧹 Clear All Logs",
                 callback_data="owner_clr_all"
@@ -2429,13 +2422,11 @@ def owner_cleanup_view(prefix=""):
         ],
         [
             InlineKeyboardButton(
-                "🔄 Kill Dead/Zombie Processes",
+                "🔄 Kill Dead Procs",
                 callback_data="owner_clr_dead"
-            )
-        ],
-        [
+            ),
             InlineKeyboardButton(
-                "🧼 Remove __pycache__",
+                "🧼 Clear __pycache__",
                 callback_data="owner_clr_cache"
             )
         ],
@@ -2786,9 +2777,7 @@ def admin_markup():
             InlineKeyboardButton(
                 "🟢 Running Scripts",
                 callback_data="adm_running"
-            )
-        ],
-        [
+            ),
             InlineKeyboardButton(
                 "⏹ Stop All Scripts",
                 callback_data="adm_stopall"
@@ -3107,14 +3096,16 @@ def control_handler(message):
 
             return
 
-        buttons = [
-            [
-                InlineKeyboardButton(
-                    f"📄 {f}",
-                    callback_data=f"file_{f}"
-                )
-            ]
+        flat_btns = [
+            InlineKeyboardButton(
+                f"📄 {f}",
+                callback_data=f"file_{f}"
+            )
             for f in files
+        ]
+        buttons = [
+            flat_btns[i:i + 2]
+            for i in range(0, len(flat_btns), 2)
         ]
 
         bot.reply_to(
@@ -3336,13 +3327,11 @@ def env_choice_markup(filename):
     return InlineKeyboardMarkup([
         [
             InlineKeyboardButton(
-                "⚙️ Configure .env Variables",
+                "⚙️ Configure .env",
                 callback_data=f"envmenu_{filename}"
-            )
-        ],
-        [
+            ),
             InlineKeyboardButton(
-                "▶️ Skip & Run Directly",
+                "▶️ Skip & Run",
                 callback_data=f"skiprun_{filename}"
             )
         ]
@@ -3686,14 +3675,16 @@ def show_myfiles(call):
 
         return
 
-    buttons = [
-        [
-            InlineKeyboardButton(
-                f"📄 {f}",
-                callback_data=f"file_{f}"
-            )
-        ]
+    flat_btns = [
+        InlineKeyboardButton(
+            f"📄 {f}",
+            callback_data=f"file_{f}"
+        )
         for f in files
+    ]
+    buttons = [
+        flat_btns[i:i + 2]
+        for i in range(0, len(flat_btns), 2)
     ]
 
     bot.edit_message_text(
@@ -4215,18 +4206,20 @@ def callback_query(call):
             "pkgs": pkgs
         }
 
-        rows = [
-            [
-                InlineKeyboardButton(
-                    f"📦 {p[:40]}",
-                    callback_data=(
-                        f"pkginst_{p}"
-                        if len(f"pkginst_{p}".encode()) <= 64
-                        else f"reqpkg_{i}"
-                    )
+        flat_pkg_btns = [
+            InlineKeyboardButton(
+                f"📦 {p[:24]}",
+                callback_data=(
+                    f"pkginst_{p}"
+                    if len(f"pkginst_{p}".encode()) <= 64
+                    else f"reqpkg_{i}"
                 )
-            ]
+            )
             for i, p in enumerate(pkgs)
+        ]
+        rows = [
+            flat_pkg_btns[i:i + 2]
+            for i in range(0, len(flat_pkg_btns), 2)
         ]
 
         rows.append([
@@ -4751,19 +4744,17 @@ def callback_query(call):
                 InlineKeyboardButton(
                     "⚙️ Set / Edit .env",
                     callback_data=f"envmenu_{filename}"
-                )
-            ],
-            [
+                ),
                 InlineKeyboardButton(
                     "📜 Logs",
                     callback_data=f"logs_{filename}"
-                ),
-                InlineKeyboardButton(
-                    "🗑 Delete",
-                    callback_data=f"del_{filename}"
                 )
             ],
             [
+                InlineKeyboardButton(
+                    "🗑 Delete",
+                    callback_data=f"del_{filename}"
+                ),
                 InlineKeyboardButton(
                     "⬅ Back",
                     callback_data="myfiles"
@@ -4851,9 +4842,7 @@ def callback_query(call):
                         InlineKeyboardButton(
                             "🔄 Refresh",
                             callback_data=f"logs_{fname}"
-                        )
-                    ],
-                    [
+                        ),
                         InlineKeyboardButton(
                             "⬅ Back",
                             callback_data=f"file_{fname}"
@@ -5789,16 +5778,33 @@ _old_control_buttons = control_buttons
 
 
 def control_buttons(uid=None):
-    k = _old_control_buttons(uid)
-    k.row(
+    markup = ReplyKeyboardMarkup(resize_keyboard=True)
+    markup.row(
+        KeyboardButton("🌏 Upload"),
+        KeyboardButton("📁 𝐌𝐲 𝐅𝐢𝐥𝐞𝐬")
+    )
+    markup.row(
+        KeyboardButton("🔄 𝐑𝐞𝐬𝐭𝐚𝐫𝐭"),
+        KeyboardButton("⏹ 𝐒𝐭𝐨𝐩")
+    )
+    markup.row(
+        KeyboardButton("⚡ 𝐒𝐩𝐞𝐞𝐝"),
+        KeyboardButton("🚀 𝐒𝐭𝐚𝐭ᴜѕ")
+    )
+    sub_btn = KeyboardButton("👑 Premium Active") if is_premium(uid) else KeyboardButton("💎 Subscription")
+    markup.row(
+        KeyboardButton("⚙️ Recommended Install"),
+        sub_btn
+    )
+    markup.row(
         KeyboardButton("🆘 Support"),
         KeyboardButton("📊 My Subscription")
     )
-    if is_premium(uid):
-        k.row(KeyboardButton("👑 Premium Active"))
-    else:
-        k.row(KeyboardButton("💎 Subscription"))
-    return k
+    if uid is not None and uid == OWNER_ID:
+        markup.row(
+            KeyboardButton("👑 Owner Panel")
+        )
+    return markup
 
 
 def notify_menu(chat, text):
@@ -5851,9 +5857,20 @@ _old_owner_markup = owner_markup
 
 
 def owner_markup():
-    k = _old_owner_markup()
-    k.row(InlineKeyboardButton("💎 Subscription Manager", callback_data="s:manager"))
-    return k
+    return InlineKeyboardMarkup([
+        [
+            InlineKeyboardButton("👥 Manage Users", callback_data="owner_users"),
+            InlineKeyboardButton("🟢 Running Scripts", callback_data="owner_running")
+        ],
+        [
+            InlineKeyboardButton("📢 Broadcast", callback_data="owner_broadcast"),
+            InlineKeyboardButton("🖥 Server Cleanup", callback_data="owner_cleanup")
+        ],
+        [
+            InlineKeyboardButton("💎 Subscription Manager", callback_data="s:manager"),
+            InlineKeyboardButton("🔄 Refresh", callback_data="owner_home")
+        ]
+    ])
 
 
 def set_state(uid, mode, **data):
@@ -7348,13 +7365,7 @@ def background_loop():
         STOP_EVENT.wait(60)
 
 
-class PremiumExceptionHandler(telebot.ExceptionHandler):
-    def handle(self, exception):
-        LOG.error("Telegram worker error", exc_info=(type(exception), exception, exception.__traceback__))
-        return True
 
-
-bot.exception_handler = PremiumExceptionHandler()
 
 
 def shutdown(signum=None, frame=None):
@@ -7366,6 +7377,60 @@ def shutdown(signum=None, frame=None):
     except Exception:
         pass
     save_data()
+
+
+class PremiumExceptionHandler(telebot.ExceptionHandler):
+    def handle(self, exception):
+        err_str = str(exception)
+        if "409" in err_str or "Conflict: terminated by other getUpdates request" in err_str:
+            LOG.warning("Telegram 409 Conflict detected (rolling deploy or another instance). Waiting 8s for handover...")
+            time.sleep(8)
+            return True
+        LOG.error("Telegram worker error", exc_info=(type(exception), exception, exception.__traceback__))
+        return True
+
+
+bot.exception_handler = PremiumExceptionHandler()
+
+
+def acquire_single_instance_lock():
+    """Ensure only one bot process runs on the same machine, killing any stale local copy."""
+    lock_file = os.path.join(STORAGE_DIR, "bot_instance.pid")
+    my_pid = os.getpid()
+    if os.path.exists(lock_file):
+        try:
+            with open(lock_file, "r") as f:
+                old_pid = int(f.read().strip())
+            if old_pid != my_pid and psutil.pid_exists(old_pid):
+                proc = psutil.Process(old_pid)
+                cmdline = " ".join(proc.cmdline())
+                if "python" in cmdline.lower():
+                    print(f"⚠️ Stopping previous local bot instance (PID {old_pid})...")
+                    kill_process_tree(proc)
+                    time.sleep(2)
+        except Exception:
+            pass
+    try:
+        with open(lock_file, "w") as f:
+            f.write(str(my_pid))
+    except Exception:
+        pass
+
+
+def prepare_telegram_session():
+    """Clear any active webhook and flush pending getUpdates session before starting polling."""
+    for attempt in range(5):
+        try:
+            bot.remove_webhook()
+            time.sleep(1)
+            bot.get_updates(offset=-1, timeout=1, long_polling_timeout=1)
+            return
+        except Exception as e:
+            if "409" in str(e) or "Conflict" in str(e):
+                print(f"⏳ Waiting for previous instance to release Telegram polling ({attempt + 1}/5)...")
+                time.sleep(5)
+            else:
+                break
 
 
 # ============================================================
@@ -7386,7 +7451,11 @@ if __name__ == "__main__":
     signal.signal(signal.SIGINT, shutdown)
     signal.signal(signal.SIGTERM, shutdown)
 
+    acquire_single_instance_lock()
+
     start_keepalive_server()
+
+    prepare_telegram_session()
 
     restore_all()
 
@@ -7394,21 +7463,27 @@ if __name__ == "__main__":
 
     print("DK HOSTING BOT IS RUNNING 🏃")
 
-    delay = 2
+    delay = 3
     try:
         while not STOP_EVENT.is_set():
             started = time.monotonic()
             try:
+                # Clear webhook cleanly, then poll with skip_pending=False inside the loop
+                # so __skip_updates() never crashes with an unhandled 409 exception.
                 bot.infinity_polling(
-                    skip_pending=True,
-                    timeout=60,
-                    long_polling_timeout=60
+                    skip_pending=False,
+                    timeout=30,
+                    long_polling_timeout=25
                 )
-            except Exception:
+            except Exception as e:
+                if "409" in str(e) or "Conflict" in str(e):
+                    LOG.warning("Telegram 409 Conflict during polling; waiting 8s for old container to exit...")
+                    STOP_EVENT.wait(8)
+                    continue
                 LOG.exception("Polling stopped unexpectedly, restarting...")
             if STOP_EVENT.is_set():
                 break
-            delay = 2 if time.monotonic() - started > 300 else min(60, delay * 2)
+            delay = 3 if time.monotonic() - started > 300 else min(30, delay * 2)
             STOP_EVENT.wait(delay)
     finally:
         shutdown()
