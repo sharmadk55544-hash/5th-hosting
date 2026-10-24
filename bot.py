@@ -11,6 +11,7 @@ import subprocess
 import shutil
 import threading
 import html
+import functools
 import psutil
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from datetime import datetime
@@ -28,7 +29,7 @@ from telebot.types import (
 # ============================================================
 
 BOT_TOKEN = os.getenv("BOT_TOKEN", "").strip()
-OWNER_ID = int(os.getenv("OWNER_ID", "0"))
+OWNER_ID = int(os.getenv("OWNER_ID", "0") or 0)
 
 STORAGE_DIR = os.getenv("STORAGE_DIR", "user_files")
 UPLOAD_DIR = os.path.join(STORAGE_DIR, "uplo556ads")
@@ -160,8 +161,13 @@ PE_DIAMOND = PREMIUM_EMOJI_IDS[19]
 PE_BOT = PREMIUM_EMOJI_IDS[20]
 
 
+EMOJI_RUNTIME_DISABLED = {'v': False}   # set automatically if Telegram keeps rejecting custom emoji
+
+
 def custom_emoji_enabled():
     """Premium emojis are ON by default. Only an explicit 0/false/no/off disables them."""
+    if EMOJI_RUNTIME_DISABLED['v']:
+        return False
     return os.getenv('ENABLE_CUSTOM_EMOJI', '1').strip().lower() not in ('0', 'false', 'no', 'off')
 
 
@@ -175,19 +181,652 @@ def pe(emoji_id, fallback="💎"):
     return f'<tg-emoji emoji-id="{emoji_id}">{fallback}</tg-emoji>'
 
 
-# Unicode emoji -> custom emoji ID. Used by decorate_emojis() so that EVERY outgoing
-# HTML message (old and new code paths) gets real custom emoji entities, not only
-# the strings that call pe() by hand. IDs are the ones already defined above.
-CUSTOM_EMOJI_MAP = {
+# ---- Custom emoji IDs generated from emoji.json (12 packs, 612 unique emojis) ----
+EMOJI_JSON_MAP = {
+    "⭐": "5427086749278943412",
+    "▶": "5341270334882463507",
+    "💜": "5343584905643180151",
+    "👣": "5368593404991127537",
+    "📄": "5343597635926245720",
+    "💨": "5343766389486272458",
+    "🎙": "5343850098398871461",
+    "🔇": "5343930942568283286",
+    "😄": "5343635672156623047",
+    "🏷": "5343863498696833806",
+    "🎨": "5341665785406308254",
+    "🖼": "5341285075210224047",
+    "🙂": "5429437075642398048",
+    "💬": "5368408034202632731",
+    "📹": "5426894489362907268",
+    "🔘": "5429555393401469575",
+    "💤": "5429584229811896096",
+    "🔄": "5429166458343011591",
+    "🏪": "5431646131941556182",
+    "🤖": "5431490770089560625",
+    "⏳": "5431672893882778047",
+    "📍": "5431626942027677918",
+    "💼": "5431745143822632981",
+    "🎥": "5431443461024791843",
+    "⚡": "5427113717378595836",
+    "🎁": "5426999892155318407",
+    "🆕": "5400038655861466061",
+    "🔑": "5229153645299245972",
+    "🛡": "5229142972305515214",
+    "🔒": "5231450353290976069",
+    "🌃": "5429170023165867734",
+    "☠": "5402479073458921106",
+    "🎃": "5402405242971103041",
+    "👻": "5402069969234043254",
+    "🧟‍♂": "5400278770303114814",
+    "🍪": "5231337984061612745",
+    "❄": "5233528344368129429",
+    "🎅": "5233588396600861264",
+    "💰": "5431416651838932108",
+    "🧭": "5818967150278218011",
+    "✈": "5821043371828841290",
+    "🧳": "5819087259038649860",
+    "📸": "5818849313555483639",
+    "🗺": "5818690584449126294",
+    "🚃": "5819122456295641130",
+    "🚌": "5821101929412955791",
+    "⛰": "5818764548080930127",
+    "🌐": "5819203420724137401",
+    "🔔": "5818953372023131792",
+    "🕹": "5821072212534233982",
+    "⌨": "5818802717455290572",
+    "📶": "5821276292200271408",
+    "🔎": "5818687127000452892",
+    "👮": "5818788359379620468",
+    "👮‍♀": "5818678700274617758",
+    "👩‍💻": "5818995853544656277",
+    "🧑‍💻": "5819154994967874788",
+    "👨‍💻": "5818813162815753343",
+    "🚓": "5818727130325847330",
+    "🚕": "5819098039406562961",
+    "🆔": "5818885490065017876",
+    "😊": "5819052779041197669",
+    "⚙": "5818705028424141605",
+    "🔐": "5821453562680448557",
+    "📱": "5819099456745770209",
+    "❕": "5818865088970362886",
+    "🛂": "5818955300463447293",
+    "❔": "5818947586702184246",
+    "💻": "5818774589714468177",
+    "🖌": "5819016409258135133",
+    "🛄": "5818740513443942870",
+    "⚫": "5818899491658403448",
+    "⚪": "5819167635056627108",
+    "🔵": "5821058666207382432",
+    "🔴": "5818717642743090785",
+    "🟢": "5818812952362356039",
+    "🟡": "5819199598203244104",
+    "👀": "5818845400840277279",
+    "⏺": "5820914686018718964",
+    "🗣": "5818751353941398485",
+    "➕": "5818651538901437748",
+    "✖": "5818804920773512716",
+    "💫": "5819060814925008220",
+    "☯": "5819005890883227245",
+    "🎖": "5819146121565441618",
+    "🟦": "5821238376228981917",
+    "👤": "5818715087237549366",
+    "📷": "5821087262099639879",
+    "➗": "5821267302833720574",
+    "🉐": "5821446132387023959",
+    "☎": "5821410007417097865",
+    "🕊": "5821081816081108141",
+    "⏸": "5947029782121155470",
+    "👮‍♂": "5854973145315806460",
+    "⬆": "5866391659469606245",
+    "🚀": "5868484743061834951",
+    "🎬": "5866430606233046609",
+    "🐤": "5866424082177723899",
+    "🎰": "5866084676682125789",
+    "🎼": "5866342164266486901",
+    "🍏": "5866011417424957198",
+    "🐥": "5866169914603081371",
+    "🐩": "5866055402185035499",
+    "👁": "5886667040432853038",
+    "⚛": "5888605518087326713",
+    "☔": "5888518794107687110",
+    "✅": "5886355367541083626",
+    "🌏": "5888675895421440226",
+    "👎": "5888789252493283486",
+    "♨": "5886324117359038886",
+    "🌈": "5891237108974095799",
+    "🏳‍🌈": "5890784857507761927",
+    "❤": "5890765160787742493",
+    "🔺": "5890942929484123460",
+    "🟥": "5890710155141582641",
+    "🎇": "5888999340818566791",
+    "↗": "5891147709229830419",
+    "✏": "5956143844457189176",
+    "⏱": "5981043230160981261",
+    "❣": "5980792215092333916",
+    "🔓": "5981075141767990672",
+    "⬇": "5979076319823007456",
+    "🗑": "5979070714890686650",
+    "🤝": "5978856151209480380",
+    "🔈": "5981056518789794953",
+    "👍": "5978637417115029380",
+    "☝": "5978555237210787432",
+    "🔊": "5980884380795539169",
+    "❌": "5980953710157632545",
+    "🚫": "5978714271259823413",
+    "🇷🇺": "5981261427384520401",
+    "🌟": "5981137088081301019",
+    "💎": "5800688138833629633",
+    "🤬": "5801003385138188414",
+    "🧠": "5801027411185242471",
+    "😮": "5798523741604419569",
+    "📅": "5800810214689084012",
+    "🎾": "5798459514663473705",
+    "🔮": "5800735009811730616",
+    "✨": "5800833282958430823",
+    "👛": "5798937402789597866",
+    "💵": "5800720664620961831",
+    "🥂": "5803393311100113792",
+    "👑": "5803032306213982905",
+    "🔖": "5803151379887297481",
+    "📣": "5803175856905917502",
+    "📌": "5801018335919347111",
+    "🐱": "5803403881014629353",
+    "💯": "5803420575552508108",
+    "🩷": "5800834464074438266",
+    "🖕": "5803375925072499189",
+    "🌚": "5802946896494334636",
+    "🎄": "5802903921051571261",
+    "🏅": "5803357151770449172",
+    "💲": "5866146206383608554",
+    "❓": "5886448503906899325",
+    "✉": "5891268505185030578",
+    "😯": "5888935788187490785",
+    "📎": "5888584382553265934",
+    "💥": "5888974760720732797",
+    "🌿": "5891031465939964877",
+    "🫊": "5891198677606732755",
+    "🏿": "5891063600885273198",
+    "🤮": "5890958576049984200",
+    "🧛‍♂": "5890944411247841790",
+    "💔": "5890772268958617745",
+    "💕": "5888555619157285122",
+    "🌀": "5913534466051021148",
+    "♻": "5911100572508885928",
+    "🕵": "5911522793563886333",
+    "🔋": "5913513644049570217",
+    "🪫": "5913614837774029701",
+    "🍽": "5913264639025615311",
+    "🇹🇷": "5913265296155611115",
+    "💶": "5913391091452743449",
+    "👜": "5926860096008098405",
+    "☀": "5924629264224753123",
+    "🛜": "5927284851093803771",
+    "🍎": "5927042730902426764",
+    "🟣": "5927197323955278457",
+    "🌙": "5924764134787782252",
+    "📋": "5926764846518376076",
+    "⬛": "5924517114038719190",
+    "✔": "5931760627923030124",
+    "☑": "5931408616698416937",
+    "🔥": "5931344368282636710",
+    "💦": "5967560851077469602",
+    "🚨": "5967317893367468926",
+    "🎤": "5969607557612835024",
+    "⌚": "5969545478155539601",
+    "♾": "5967617883948192905",
+    "🎮": "6008006717017690954",
+    "⚠": "6008233706039284019",
+    "💙": "5780496071645991525",
+    "🪤": "5780922965625410989",
+    "➖": "5789644639749281149",
+    "5⃣": "5791772473921901213",
+    "6⃣": "5789851558388700130",
+    "🥰": "5789793808258437906",
+    "🕶": "5789607097440147328",
+    "💧": "5789876430544311548",
+    "1⃣": "5800923472976679740",
+    "2⃣": "5802912291942830882",
+    "3⃣": "5801094885121463194",
+    "4⃣": "5800901723262293755",
+    "7⃣": "5801177052140803279",
+    "8⃣": "5801170261797507837",
+    "9⃣": "5800648479105618763",
+    "🔍": "5803403369913520877",
+    "🛸": "5800824143268025850",
+    "🦁": "5803360604924154219",
+    "🛒": "5803157955482227929",
+    "🤩": "6084695058894819673",
+    "❤‍🔥": "6089028758205897441",
+    "🔝": "6086784182527202100",
+    "💀": "6087162775304409688",
+    "👹": "6086817820711064076",
+    "😉": "6089024570612781324",
+    "🚩": "6087060924449953862",
+    "💭": "6086708148721160702",
+    "☄": "6093377734715642495",
+    "💠": "6093865234978574850",
+    "🟿": "6093513636070822132",
+    "➡": "6093852921307337895",
+    "☃": "6093818260921258328",
+    "📊": "6093382540784046658",
+    "🏭": "6093596992796102377",
+    "🖥": "6093875388281263010",
+    "😀": "6093864814071780526",
+    "😁": "6093425709500339144",
+    "🥹": "6093835694193512831",
+    "😢": "6093376514944929700",
+    "😃": "6095627640448750533",
+    "🧐": "6093710452947161299",
+    "🥲": "6093467039970629408",
+    "👏": "6093744967304352336",
+    "😎": "6093639774965338848",
+    "🏵": "6093584842333622858",
+    "🤔": "6093666528316625608",
+    "😒": "6093576514392037256",
+    "🤣": "6093661404420641058",
+    "🥺": "6093779241143374561",
+    "🤗": "6095742874421301875",
+    "🏝": "6093464720688288321",
+    "🍴": "6093451264555750089",
+    "⛔": "6093778090092139204",
+    "👋": "6095851644468072524",
+    "🕓": "6093456762113888541",
+    "😂": "6093522689861882360",
+    "🤨": "6093493892106162082",
+    "😧": "6095888417978061469",
+    "🤪": "6096026428162183499",
+    "😍": "6093725459562893833",
+    "😭": "6093930033150170743",
+    "😏": "6093748819890018226",
+    "🧧": "6246774261218810895",
+    "🤙": "5780840497958360623",
+    "😆": "5780413823022273797",
+    "😱": "5783091623462180025",
+    "😟": "5783151611270403662",
+    "😾": "5783124312458270318",
+    "😨": "5782753386197685582",
+    "😼": "5783023329187206172",
+    "🎈": "5782734256413349701",
+    "😑": "5782876166427775766",
+    "😝": "5782993191401689635",
+    "😺": "5783154622042477033",
+    "😸": "5782681033178617588",
+    "🌸": "5782789524052513567",
+    "🐶": "5780764734735259441",
+    "💃": "5780636053220103355",
+    "😔": "5782882973950940285",
+    "🦶": "5782867877140895194",
+    "🤞": "5782827367009359233",
+    "🐈": "5783166815454630601",
+    "🔨": "5783010354091005955",
+    "🥡": "5783000136363807783",
+    "😡": "5782833521697494295",
+    "🌹": "5783036501851902672",
+    "🫂": "5783182062588531009",
+    "🟪": "5783019966227813296",
+    "🤫": "5782961266909779599",
+    "🙄": "5783066953170032069",
+    "🐣": "5785100057543972225",
+    "🤓": "5782848150356104237",
+    "☺": "5785056124323500928",
+    "◼": "5785181606088020813",
+    "📨": "6010453886303737503",
+    "📝": "6010292709066019210",
+    "🕖": "6010415291727615186",
+    "🔶": "6010071909092298592",
+    "🔹": "6010352555140321877",
+    "🔸": "6010479565913198652",
+    "‼": "6010089965134811556",
+    "❗": "6010323791744341519",
+    "🛩": "6010061175969027500",
+    "🆏": "6010080507616826629",
+    "❤‍🩹": "6010209683053220363",
+    "🕦": "6010153921492816021",
+    "🧑": "6010482465016123577",
+    "😇": "6010068610557417146",
+    "😚": "6298544959486167081",
+    "😥": "6298480869984175913",
+    "👽": "6298566954013689358",
+    "🐺": "6220014823963363136",
+    "🐹": "6219810752887262728",
+    "🐋": "6219882697884436514",
+    "☜": "6219727185708582935",
+    "😴": "6298513503145691368",
+    "🔻": "6255512604110751681",
+    "🆒": "6170120369274358018",
+    "🥠": "6298540449770506365",
+    "👩‍🚒": "6298452746538321740",
+    "🇮🇳": "6138853050309150669",
+    "🕺": "6105135237753210602",
+    "0⃣": "6219488394116859803",
+    "🫶": "6298454498884978957",
+    "😘": "6298412927896520857",
+    "🍄": "6102848541330249485",
+    "💍": "6102796683895117675",
+    "😤": "6034865170449175739",
+    "🙁": "6035210301136182368",
+    "😈": "6035136809950778133",
+    "👿": "6032985916098750553",
+    "👅": "6035374291577475270",
+    "😠": "6035355642829475999",
+    "😕": "6035072209347678547",
+    "👒": "6033077437556855182",
+    "💣": "6032673796530377389",
+    "♋": "6032916496542339992",
+    "☁": "6034832094906028632",
+    "🩸": "6035343380697846690",
+    "🪽": "6035194237958493530",
+    "🫌": "6035317340311129897",
+    "🗡": "6033067975743902590",
+    "🆗": "4956649845952611245",
+    "🚷": "4958472535583753086",
+    "🪩": "4956247175588742152",
+    "🧝": "4956582878822531899",
+    "🔗": "4958689671950369798",
+    "ℹ": "4958529074533238201",
+    "🐦‍⬛": "4958830950604604428",
+    "🪅": "4956614279328433146",
+    "🤭": "4956252273714922652",
+    "🌕": "4956273117191213833",
+    "🚗": "4958801766301828295",
+    "🦌": "4956761150030087025",
+    "🍭": "4956555872068174842",
+    "☕": "4956252540002894879",
+    "🌲": "4956557431141303451",
+    "🍨": "4956420821116519533",
+    "🕷": "4958923223681991654",
+    "🔽": "4956720180337050608",
+    "🧤": "4956379112689107750",
+    "🎀": "4956722293460960020",
+    "©": "4956313992394966051",
+    "🫐": "4958990289596318519",
+    "🦄": "4956529835976426308",
+    "🎩": "4956564307383944011",
+    "⚰": "4958724224962265918",
+    "🧦": "4958668411862254755",
+    "🧹": "4956591954088428445",
+    "🍲": "4958644823901864780",
+    "🎉": "4956308456182121758",
+    "🌛": "4958828150285927471",
+    "🍃": "4956468890390496140",
+    "🍑": "4956214684161147887",
+    "🫦": "4956516272469705982",
+    "⛸": "4958738711886955477",
+    "💌": "4958503072801228000",
+    "🪦": "4956214142995268150",
+    "🔼": "4958790109760587106",
+    "💋": "4956680567853679460",
+    "🩶": "4956750494216225777",
+    "🗳": "4956214413578207998",
+    "📉": "4956552088201986883",
+    "💐": "4956353063712457393",
+    "🌺": "4956283708580563433",
+    "🌩": "4956233646441760046",
+    "🦋": "4958719848390591540",
+    "😶‍💫": "4956500084737966923",
+    "💡": "4958665796227171144",
+    "💝": "4958839553424098323",
+    "🎏": "4956499169909932961",
+    "🧶": "4958558095627256768",
+    "🎆": "4958488079070397388",
+    "🪟": "4956494239287477123",
+    "💩": "4956505651015582631",
+    "🧩": "4958903389523018769",
+    "🏡": "4958485609464202497",
+    "📈": "4956599758044005301",
+    "💖": "4958577444454925201",
+    "🍰": "4958931508673905639",
+    "🧸": "4956708038464504901",
+    "👈": "4956304191279596468",
+    "🦴": "4956357289960276851",
+    "🧪": "4956561910792192697",
+    "👼": "4958963647914181913",
+    "🥳": "4956425077429109847",
+    "🐸": "4956488741729338655",
+    "🐈⬛": "4956598503913554822",
+    "🍬": "4958563494401147639",
+    "🔜": "4956507210088711059",
+    "🎶": "4958562566688211974",
+    "🏳": "5433754814855001814",
+    "🇨🇳": "5433827537241258614",
+    "🇿🇦": "5431855966863766753",
+    "🇧🇷": "5431769908604056769",
+    "🇳🇴": "5434147542369579483",
+    "🇬🇧": "5435996255207567113",
+    "🇦🇨": "5433636707549331311",
+    "🇦🇫": "5433845881046578644",
+    "🇦🇮": "5433627189901801019",
+    "🇦🇱": "5433946537900128161",
+    "🇦🇴": "5433750193470191473",
+    "🇦🇷": "5433754239329383923",
+    "🇦🇪": "5433804400252434985",
+    "🇦🇺": "5431556723607352698",
+    "🇦🇹": "5431640943621060829",
+    "🇧🇾": "5431375858239550223",
+    "🇧🇯": "5433682092468746953",
+    "🇧🇩": "5433854239052935880",
+    "🇧🇧": "5434027579638035690",
+    "🇧🇪": "5431739800883312139",
+    "🇧🇦": "5433598052843665552",
+    "🇧🇼": "5431431529605642522",
+    "🇧🇿": "5433838931789492934",
+    "🇧🇲": "5433609855413794108",
+    "🇧🇳": "5433991338703991663",
+    "🇧🇱": "5433895109961725692",
+    "🇧🇫": "5433789964867352475",
+    "🇧🇹": "5431663303220804322",
+    "🇨🇦": "5433666360003540231",
+    "🇨🇩": "5433696429069580735",
+    "🇨🇫": "5433774971136521802",
+    "🇨🇬": "5433960238845802718",
+    "🇨🇭": "5431865097964237519",
+    "🇨🇮": "5431374711483282830",
+    "🇨🇰": "5433825269498525925",
+    "🇨🇱": "5431561302042488884",
+    "🇨🇲": "5433630999537792332",
+    "🇨🇴": "5431703839122141424",
+    "🇨🇵": "5433861570562111275",
+    "🇨🇷": "5431489619038320862",
+    "🇨🇻": "5434096943359866241",
+    "🇨🇼": "5433958877341169005",
+    "🇨🇽": "5433708502222649633",
+    "🇨🇾": "5433614889115464671",
+    "🇨🇿": "5434140679011842196",
+    "🇩🇪": "5431462560744353934",
+    "🇩🇬": "5431619494554383246",
+    "🇸🇻": "5434134189316257066",
+    "🏴󠁧󠁢󠁥󠁮󠁧󠁿": "5431508997930758727",
+    "🇪🇨": "5433723401464198287",
+    "🇪🇪": "5433727662071755290",
+    "🇪🇬": "5433804408842368654",
+    "🇪🇷": "5434011361841525609",
+    "🇪🇸": "5433640560134994324",
+    "🇪🇹": "5431380440969654931",
+    "🇪🇺": "5434067424049639550",
+    "🇫🇮": "5433979415874779870",
+    "🇫🇯": "5433982207603520017",
+    "🇫🇰": "5433596974806873997",
+    "🇫🇲": "5433814347396692144",
+    "🇫🇴": "5431695798943363996",
+    "🇫🇷": "5434041611296192616",
+    "🇬🇦": "5433935894971168754",
+    "🇬🇩": "5431676201007592926",
+    "🇬🇪": "5434115081006756195",
+    "🇬🇫": "5434072118448894385",
+    "🇬🇬": "5434036689263670086",
+    "🇬🇭": "5433628435442316429",
+    "🇬🇮": "5433884376838454074",
+    "🇬🇱": "5433882955204279044",
+    "🇬🇲": "5433749102548496991",
+    "🇬🇳": "5434155397864764491",
+    "🇬🇵": "5433810168393511493",
+    "🇬🇶": "5434067655977874913",
+    "🇬🇷": "5433860784583096428",
+    "🇬🇸": "5431626087329182684",
+    "🇬🇹": "5433643519367461444",
+    "🇬🇺": "5433755347430946164",
+    "🇬🇼": "5433792670696748414",
+    "🇬🇾": "5434004021742417775",
+    "🇭🇳": "5433884162090088194",
+    "🇭🇷": "5433820583689205435",
+    "🇭🇹": "5433652375590025431",
+    "🇭🇺": "5431785473565537213",
+    "🇭🇰": "5433727778035872782",
+    "🇮🇩": "5433872853441196535",
+    "🇮🇪": "5431620340662940910",
+    "🇮🇱": "5431414444225738871",
+    "🇮🇲": "5433876972314836083",
+    "🇮🇶": "5434119663736862995",
+    "🇮🇷": "5431669247455540884",
+    "🇮🇸": "5433626051735467592",
+    "🇮🇹": "5433833485770964033",
+    "🇯🇪": "5433773682646332733",
+    "🇯🇲": "5433968339154122439",
+    "🇯🇴": "5434150334098327966",
+    "🇯🇵": "5434010919459894038",
+    "🇰🇪": "5433943093336356065",
+    "🇰🇬": "5433598722858562967",
+    "🇰🇭": "5434130474169544969",
+    "🇰🇮": "5433859405898594234",
+    "🇰🇲": "5431519649449653173",
+    "🇰🇳": "5434064563601421981",
+    "🇰🇵": "5431428076451934112",
+    "🇰🇷": "5433798752370439037",
+    "🇰🇼": "5433674924168328689",
+    "🇰🇾": "5434012796360604182",
+    "🇰🇿": "5431656358258685474",
+    "🇱🇦": "5434131139889478358",
+    "🇱🇧": "5433895144321462723",
+    "🇱🇨": "5434026158003862063",
+    "🇱🇮": "5431350891594658893",
+    "🇱🇰": "5433737613510981562",
+    "🇱🇷": "5433836092816108548",
+    "🇱🇸": "5434142701941437163",
+    "🇱🇹": "5434057098948261250",
+    "🇱🇺": "5433714227414054291",
+    "🇱🇻": "5431434686406604479",
+    "🇱🇾": "5433852121634060293",
+    "🇲🇦": "5433776225266972326",
+    "🇲🇨": "5433851438734259274",
+    "🇲🇩": "5433972762970437003",
+    "🇲🇪": "5433748668756802256",
+    "🇲🇫": "5434098446598419585",
+    "🇲🇬": "5433855712226718930",
+    "🇲🇭": "5433920471743607048",
+    "🇲🇰": "5431353614603926322",
+    "🇲🇱": "5431394721735914525",
+    "🇲🇲": "5433738201921500487",
+    "🇲🇳": "5431484894574295376",
+    "🇲🇴": "5433613703704490463",
+    "🇲🇷": "5431830051031103147",
+    "🇲🇸": "5434125517777286321",
+    "🇲🇹": "5434001565021123877",
+    "🇲🇺": "5431894290856949874",
+    "🇲🇻": "5433721073591926542",
+    "🇲🇼": "5433691077540330355",
+    "🇲🇽": "5431588626624427422",
+    "🇲🇾": "5433902785068283672",
+    "🇲🇿": "5434129692485498098",
+    "🇳🇦": "5433867115364889538",
+    "🇳🇨": "5433785261878162812",
+    "🇳🇪": "5431696408828720537",
+    "🇳🇫": "5433711929606551683",
+    "🇳🇬": "5434045605615777483",
+    "🇳🇮": "5431755073787016798",
+    "🇳🇱": "5431520783321019240",
+    "🇳🇵": "5434132406904830055",
+    "🇳🇷": "5434009493530752727",
+    "🇳🇺": "5433910876786670092",
+    "🇳🇿": "5434058864179822603",
+    "🇴🇲": "5433834847275594263",
+    "🇵🇦": "5434131504961696728",
+    "🇵🇪": "5434029851675734900",
+    "🇵🇫": "5434040911216522968",
+    "🇵🇬": "5433629779767081651",
+    "🇵🇭": "5433772127868172193",
+    "🇵🇰": "5433640100573491806",
+    "🇵🇱": "5433678179753538895",
+    "🇵🇲": "5434152992683079729",
+    "🇵🇳": "5431529734032865031",
+    "🇵🇷": "5433684690923961019",
+    "🇵🇸": "5433895436379240198",
+    "🇵🇹": "5431788596006762529",
+    "🇵🇼": "5434076031164103400",
+    "🇵🇾": "5433852276252883640",
+    "🇶🇦": "5433992296481700344",
+    "🇷🇪": "5434153928985949656",
+    "🇷🇴": "5434094173105960379",
+    "🇷🇸": "5434009132753499322",
+    "🇷🇼": "5434078960331796980",
+    "🇼🇸": "5433735143904786332",
+    "🇸🇦": "5433811229250434478",
+    "🎟": "5458871830846656370",
+    "📦": "5458790973792340888",
+    "💳": "5460959824902638811",
+    "🔪": "5458848109742280160",
+    "🔫": "5458685884532545296",
+    "💊": "5460985873879288634",
+    "🦈": "5460680720747877706",
+    "🦉": "5461152772013444213",
+    "🐒": "5460791419234963381",
+    "🦊": "5460660203689105734",
+    "🐰": "5461154601669510918",
+    "🦦": "5460903002485314455",
+    "🐼": "5460880372302629461",
+    "🦝": "5460640760372154944",
+    "🐧": "5458676946705602852",
+    "🦆": "5458484867178188906",
+    "👾": "5460913374831332135",
+    "🐕": "5458404181922566812",
+    "🦅": "5461099497239105126",
+    "🐉": "5458692095055255320",
+    "🐢": "5458626906041636543",
+    "🏆": "5460948786836687726",
+    "🎲": "5463376160618468145",
+    "🥇": "5462947101975530592",
+    "🐔": "5350310639745130183",
+    "🫥": "5350783674558211235",
+    "😷": "5350450260541990949",
+    "🤤": "5350534493440595973",
+    "🩴": "5348281761619011725",
+    "🩱": "5348586579742976907",
+    "❇": "5370796766163657234",
+    "🪧": "5371000046965780387",
+    "🎗": "5370885517367858328",
+    "🎯": "5228855127892327218",
+    "🥈": "5231431133312348035",
+}
+
+# Older IDs are kept only for emojis that emoji.json does not contain (for example 📁 and 📤).
+_LEGACY_EMOJI_MAP = {
     "🔥": PE_FIRE, "⭐": PE_STAR, "🚀": PE_ROCKET, "👑": PE_CROWN, "🛡": PE_SHIELD,
     "💰": PE_MONEY, "📱": PE_PHONE, "✅": PE_CHECK, "❌": PE_CROSS, "⚠": PE_WARNING,
     "🔒": PE_LOCK, "🎁": PE_GIFT, "👤": PE_USER, "📤": PE_UPLOAD, "📁": PE_FOLDER,
     "⚙": PE_SETTINGS, "🖥": PE_SERVER, "💎": PE_DIAMOND, "🤖": PE_BOT,
 }
-_EMOJI_RE = re.compile(
-    r'(<tg-emoji\b.*?</tg-emoji>|<pre>.*?</pre>|<code>.*?</code>)|('
-    + '|'.join(re.escape(k) + '\ufe0f?' for k in sorted(CUSTOM_EMOJI_MAP, key=len, reverse=True))
-    + ')', re.S)
+CUSTOM_EMOJI_MAP = {**_LEGACY_EMOJI_MAP, **EMOJI_JSON_MAP}
+
+
+def _norm_emoji(value):
+    return value.replace('\ufe0f', '')
+
+
+def emoji_id_for(char, default=None):
+    return CUSTOM_EMOJI_MAP.get(_norm_emoji(char), default)
+
+
+# every named constant now points at the emoji.json ID where one exists
+PE_FIRE, PE_STAR, PE_ROCKET, PE_CROWN = (emoji_id_for(c, d) for c, d in (("🔥", PE_FIRE), ("⭐", PE_STAR), ("🚀", PE_ROCKET), ("👑", PE_CROWN)))
+PE_SHIELD, PE_MONEY, PE_PHONE, PE_CHECK = (emoji_id_for(c, d) for c, d in (("🛡", PE_SHIELD), ("💰", PE_MONEY), ("📱", PE_PHONE), ("✅", PE_CHECK)))
+PE_CROSS, PE_WARNING, PE_LOCK, PE_GIFT = (emoji_id_for(c, d) for c, d in (("❌", PE_CROSS), ("⚠", PE_WARNING), ("🔒", PE_LOCK), ("🎁", PE_GIFT)))
+PE_APPROVE, PE_USER, PE_ADMIN = emoji_id_for("✅", PE_APPROVE), emoji_id_for("👤", PE_USER), emoji_id_for("🛡", PE_ADMIN)
+PE_UPLOAD, PE_FOLDER = emoji_id_for("📤", PE_UPLOAD), emoji_id_for("📁", PE_FOLDER)
+PE_SETTINGS, PE_SERVER, PE_DIAMOND, PE_BOT = (emoji_id_for(c, d) for c, d in (("⚙", PE_SETTINGS), ("🖥", PE_SERVER), ("💎", PE_DIAMOND), ("🤖", PE_BOT)))
+
+_EMOJI_ALT = '|'.join(''.join(re.escape(c) + '\ufe0f?' for c in k)
+                      for k in sorted(CUSTOM_EMOJI_MAP, key=len, reverse=True))
+_EMOJI_RE = re.compile(r'(<tg-emoji\b.*?</tg-emoji>|<pre>.*?</pre>|<code>.*?</code>)|(' + _EMOJI_ALT + ')', re.S)
+_LEAD_EMOJI_RE = re.compile('^(' + _EMOJI_ALT + r')\s*')
 
 
 def decorate_emojis(text):
@@ -200,8 +839,34 @@ def decorate_emojis(text):
     def swap(m):
         if m.group(1):
             return m.group(1)
-        return pe(CUSTOM_EMOJI_MAP[m.group(2).replace('\ufe0f', '')], m.group(2))
+        return pe(CUSTOM_EMOJI_MAP[_norm_emoji(m.group(2))], m.group(2))
     return _EMOJI_RE.sub(swap, text)
+
+
+BUTTON_ICON_STATE = {'disabled': os.getenv('BUTTON_EMOJI', '1').strip().lower() in ('0', 'false', 'no', 'off')}
+_PlainInlineButton = InlineKeyboardButton
+
+
+class InlineKeyboardButton(_PlainInlineButton):
+    """Moves a leading emoji of the label into icon_custom_emoji_id (premium icon on the button)."""
+
+    def __init__(self, text, *args, **kwargs):
+        self._plain_text = text
+        self._icon = None
+        label = icon = None
+        if custom_emoji_enabled() and not BUTTON_ICON_STATE['disabled'] and 'icon_custom_emoji_id' not in kwargs:
+            m = _LEAD_EMOJI_RE.match(text)
+            if m and text[m.end():].strip():
+                icon = CUSTOM_EMOJI_MAP.get(_norm_emoji(m.group(1)))
+                label = text[m.end():]
+        if icon:
+            try:
+                super().__init__(label, *args, icon_custom_emoji_id=icon, **kwargs)
+                self._icon = icon
+                return
+            except TypeError:
+                BUTTON_ICON_STATE['disabled'] = True   # installed library predates Bot API 9.4
+        super().__init__(text, *args, **kwargs)
 
 
 def safe_html(value):
@@ -215,18 +880,121 @@ def premium_header(title, emoji_id=PE_CROWN, fallback="👑"):
     )
 
 
+
 # ============================================================
 # TELEGRAM BOT INIT
 # ============================================================
 
 if not BOT_TOKEN or OWNER_ID <= 0:
-    raise SystemExit("Set BOT_TOKEN and a positive OWNER_ID before starting.")
+    raise SystemExit("Set BOT_TOKEN and OWNER_ID in the environment variables first.")
 
 bot = telebot.TeleBot(
     BOT_TOKEN,
-    threaded=False,
     parse_mode=None
 )
+
+
+# ---- Premium emoji send layer -------------------------------------------------
+# Wraps the send/edit methods ONCE so every HTML message and caption in the bot
+# (legacy handlers included) gets custom emoji entities and button icons. If Telegram
+# rejects them, the message is resent in steps: without button icons, then without
+# custom emoji, so a message is never lost.
+EMOJI_STATS = {'sent':0,'rejected':0,'button_fallbacks':0,'last_error':''}
+_TG_EMOJI_TAG = re.compile(r'<tg-emoji[^>]*>(.*?)</tg-emoji>', re.S)
+RAW_SEND_MESSAGE = bot.send_message
+
+def strip_custom_emoji(value):
+    return _TG_EMOJI_TAG.sub(r'\1', value) if isinstance(value,str) else value
+
+def _markup_has_icons(markup):
+    return any(getattr(b,'_icon',None) for row in (getattr(markup,'keyboard',None) or []) for b in row)
+
+def strip_button_icons(markup):
+    import copy
+    clone = copy.deepcopy(markup)
+    for row in clone.keyboard:
+        for b in row:
+            if getattr(b,'_icon',None):
+                b.icon_custom_emoji_id = None
+                b.text = b._plain_text
+                b._icon = None
+    return clone
+
+def _install_emoji_layer():
+    def make(original, pos, field):
+        @functools.wraps(original)
+        def wrapper(*args, **kwargs):
+            args = list(args)
+            if kwargs.get('parse_mode') == 'HTML':
+                if field in kwargs:
+                    kwargs[field] = decorate_emojis(kwargs[field])
+                elif pos is not None and len(args) > pos:
+                    args[pos] = decorate_emojis(args[pos])
+            markup = kwargs.get('reply_markup')
+            used_text = any('<tg-emoji' in v for v in list(args)+list(kwargs.values()) if isinstance(v,str))
+            used_icon = _markup_has_icons(markup)
+            try:
+                result = original(*args, **kwargs)
+                if used_text:
+                    EMOJI_STATS['sent'] += 1
+                return result
+            except Exception as exc:
+                if not (getattr(exc,'error_code',0) == 400 and 'not modified' not in str(exc).lower()
+                        and (used_text or used_icon)):
+                    raise
+                EMOJI_STATS['last_error'] = str(exc)[:300]
+                if used_icon:
+                    kw2 = dict(kwargs)
+                    kw2['reply_markup'] = strip_button_icons(markup)
+                    try:
+                        result = original(*args, **kw2)
+                        BUTTON_ICON_STATE['disabled'] = True
+                        EMOJI_STATS['button_fallbacks'] += 1
+                        print(f'Telegram rejected button icons; disabled: {exc}')
+                        return result
+                    except Exception as exc2:
+                        if getattr(exc2,'error_code',0) != 400:
+                            raise
+                        exc, kwargs = exc2, kw2
+                if not used_text:
+                    raise exc
+                EMOJI_STATS['rejected'] += 1
+                if EMOJI_STATS['rejected'] >= 3 and EMOJI_STATS['sent'] == 0:
+                    EMOJI_RUNTIME_DISABLED['v'] = True
+                    print('Telegram keeps rejecting custom emoji; switched off until restart.')
+                print(f'Custom emoji rejected, resending plain: {exc}')
+                return original(*[strip_custom_emoji(a) for a in args],
+                                **{k:strip_custom_emoji(v) for k,v in kwargs.items()})
+        wrapper._emoji_layer = True
+        return wrapper
+    for name, pos, field in (('send_message',1,'text'),('edit_message_text',0,'text'),('send_photo',None,'caption'),
+                             ('send_document',None,'caption'),('edit_message_caption',None,'caption')):
+        current = getattr(bot, name)
+        if not getattr(current, '_emoji_layer', False):
+            setattr(bot, name, make(current, pos, field))
+
+_install_emoji_layer()
+
+def emoji_self_test(uid):
+    """Owner command /emojitest: sends sample custom emojis plus a button icon and reports Telegram's answer."""
+    sample = ' '.join(pe(i,'•') for i in list(EMOJI_JSON_MAP.values())[:40])
+    probe = InlineKeyboardMarkup([[InlineKeyboardButton('👑 Button icon test','s:home')]])
+    report = []
+    try:
+        RAW_SEND_MESSAGE(uid, '🧪 <b>Custom emoji test</b>\n'+sample, parse_mode='HTML')
+        report.append('✅ Text: Telegram accepted custom emoji entities.')
+    except Exception as exc:
+        report.append('⚠️ Text rejected: <code>'+safe_html(str(exc)[:300])+'</code>')
+    try:
+        RAW_SEND_MESSAGE(uid, 'Button icon probe 👇', reply_markup=probe)
+        report.append('✅ Button: accepted' + (' (icon sent)' if _markup_has_icons(probe) else ' (library has no icon support, plain label sent)'))
+    except Exception as exc:
+        report.append('⚠️ Button rejected: <code>'+safe_html(str(exc)[:300])+'</code>')
+    report.append(f'Sent: {EMOJI_STATS["sent"]} • Rejected: {EMOJI_STATS["rejected"]} • Button fallbacks: {EMOJI_STATS["button_fallbacks"]}\n'
+                  f'Enabled: {custom_emoji_enabled()} • Button icons: {not BUTTON_ICON_STATE["disabled"]}\n'
+                  'If the emojis above look plain, Telegram is accepting but not showing them for this bot.')
+    bot.send_message(uid, '\n'.join(report), parse_mode='HTML')
+
 
 
 # ============================================================
@@ -477,13 +1245,9 @@ def notify_owner(text, index=0):
 
     try:
 
-        emoji_id = PREMIUM_EMOJI_IDS[
-            index % len(PREMIUM_EMOJI_IDS)
-        ]
-
         bot.send_message(
             OWNER_ID,
-            f"{pe(emoji_id, '🔔')} {text}",
+            f"{pe(emoji_id_for('🔔', PE_STAR), '🔔')} {text}",
             parse_mode="HTML"
         )
 
@@ -2911,6 +3675,13 @@ def start_keepalive_server():
         print(f"Keep-alive server error: {e}")
 
 
+@bot.message_handler(commands=["emojitest"])
+def emojitest_command(message):
+
+    if message.from_user.id == OWNER_ID:
+        emoji_self_test(message.from_user.id)
+
+
 @bot.message_handler(
     commands=["start"]
 )
@@ -4919,10 +5690,25 @@ def callback_query(call):
 
         fname = data[4:]
 
-        path = os.path.join(
-            user_folder(uid),
-            fname
-        )
+        if fname not in users[uid]["files"]:
+
+            bot.answer_callback_query(
+                call.id,
+                "❌ File not found."
+            )
+
+            return
+
+        path = safe_user_path(uid, fname)
+
+        if not path:
+
+            bot.answer_callback_query(
+                call.id,
+                "❌ Invalid path."
+            )
+
+            return
 
         stop_script(uid, path)
 
@@ -5358,1990 +6144,42 @@ def restore_all():
 # BOT START
 # ============================================================
 
+if __name__ == "__main__":
 
-# ============================================================================
-# PREMIUM HOST UPGRADE - integrated with the original DK Hosting Bot above.
-# SECURITY: rootless Docker is mandatory. Never mount the Docker socket into jobs.
-# Run on a dedicated Linux host; containers are not a VM-grade security boundary.
-# Dependencies: pip install pyTelegramBotAPI psutil 'qrcode[pil]' Pillow
-# Required environment: BOT_TOKEN, OWNER_ID. See the supplied deployment notes.
-# ============================================================================
-import sqlite3
-import logging
-from logging.handlers import RotatingFileHandler
-from contextlib import contextmanager
-from pathlib import Path, PurePosixPath
-from io import BytesIO
-from urllib.parse import urlencode
-from decimal import Decimal, InvalidOperation
-from collections import defaultdict, deque
-from datetime import timezone
-import hashlib
-import secrets
-import signal
-import functools
-import ast
+    print(
+        "=================================================="
+    )
 
-os.umask(0o077)
-os.chmod(STORAGE_DIR,0o700)
-os.chmod(UPLOAD_DIR,0o700)
-ADMIN_IDS = {int(x) for x in os.getenv('ADMIN_IDS', '').split(',') if x.strip()}
-ADMIN_IDS.add(OWNER_ID)
-DB_PATH = os.path.join(STORAGE_DIR, 'premium.sqlite3')
-PYTHON_IMAGE = os.getenv('PYTHON_IMAGE', 'python:3.12-slim')
-NODE_IMAGE = os.getenv('NODE_IMAGE', 'node:22-slim')
-MEMORY_MB = int(os.getenv('BOT_MEMORY_MB', '256'))
-BOT_CPUS = float(os.getenv('BOT_CPUS', '0.5'))
-BOT_PIDS = int(os.getenv('BOT_PIDS', '64'))
-MAX_PROJECT_MB = int(os.getenv('MAX_PROJECT_MB', '100'))
-ORDER_TTL = int(os.getenv('ORDER_TTL_SECONDS', '900'))
-RATE_LIMIT = int(os.getenv('RATE_LIMIT_PER_MINUTE', '30'))
-CUSTOM_EMOJI_ID = os.getenv('CUSTOM_EMOJI_ID', '')
-STOP_EVENT = threading.Event()
-DB_LOCK = threading.RLock()
-RUN_LOCK = threading.RLock()
-UI_LOCK = threading.RLock()
-UI_STATE = {}
-RATE = defaultdict(deque)
-RUNTIME = {}
-DOCKER_READY = False
-LOG = logging.getLogger('premiumhost')
-LOG.setLevel(logging.INFO)
-_handler = RotatingFileHandler(os.path.join(STORAGE_DIR, 'host.log'), maxBytes=2_000_000, backupCount=4)
-_handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s %(message)s'))
-LOG.addHandler(_handler)
-LOG.addHandler(logging.StreamHandler())
+    print(
+        "🔧 DK HOSTING BOT"
+    )
 
-@contextmanager
-def database(write=False):
-    with DB_LOCK:
-        con = sqlite3.connect(DB_PATH, timeout=30)
-        con.row_factory = sqlite3.Row
-        try:
-            con.execute('PRAGMA foreign_keys=ON')
-            con.execute('PRAGMA busy_timeout=30000')
-            if write:
-                con.execute('BEGIN IMMEDIATE')
-            yield con
-            con.commit()
-        except BaseException:
-            con.rollback()
-            raise
-        finally:
-            con.close()
+    print(
+        "=================================================="
+    )
 
-def rows(sql, args=()):
-    with database() as con:
-        return [dict(r) for r in con.execute(sql, args)]
+    if not BOT_TOKEN:
 
-def execute(sql, args=()):
-    with database(True) as con:
-        return con.execute(sql, args).lastrowid
+        print(
+            "❌ BOT_TOKEN is not configured!"
+        )
 
-def setting(key, default=''):
-    result = rows('SELECT value FROM settings WHERE key=?', (key,))
-    return result[0]['value'] if result else str(default)
+        print(
+            "Set BOT_TOKEN in Render Environment Variables."
+        )
 
-def set_setting(key, value):
-    execute('INSERT INTO settings(key,value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value', (key,str(value)))
+        sys.exit(1)
 
-def backup_database(send=False):
-    folder = Path(STORAGE_DIR) / 'backups'
-    folder.mkdir(exist_ok=True)
-    dest = folder / ('premium-' + datetime.now(timezone.utc).strftime('%Y%m%d-%H%M%S') + '.sqlite3')
-    with DB_LOCK:
-        src = sqlite3.connect(DB_PATH)
-        dst = sqlite3.connect(str(dest))
-        try:
-            src.backup(dst)
-        finally:
-            dst.close()
-            src.close()
-    for old in sorted(folder.glob('premium-*.sqlite3'))[:-7]:
-        old.unlink(missing_ok=True)
-    if send:
-        with dest.open('rb') as stream:
-            telegram(bot.send_document, OWNER_ID, stream, caption='Daily database backup. Store securely: contains user settings.')
-    return dest
-
-# name, price in paise, days, bot slots, description, emoji
-DEFAULT_PLANS = [('Weekly Plan',4900,7,5,'7 days of premium hosting','💎'),
-                 ('Monthly Plan',9900,30,10,'30 days of premium hosting','👑')]
-UPI_RE = re.compile(r'[A-Za-z0-9._-]{2,64}@[A-Za-z][A-Za-z0-9.-]{1,30}')
-
-def init_premium_db():
-    if os.path.exists(DB_PATH):
-        backup_database()
-    if os.path.exists(DATA_FILE):
-        shutil.copy2(DATA_FILE, DATA_FILE + '.pre-premium.bak')
-    with database() as con:
-        con.execute('PRAGMA journal_mode=WAL')
-        con.executescript('''
-        CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY, value TEXT NOT NULL);
-        CREATE TABLE IF NOT EXISTS users(
-          id INTEGER PRIMARY KEY, legacy_json TEXT NOT NULL DEFAULT '{}',
-          plan TEXT, plan_expiry REAL NOT NULL DEFAULT 0, bot_limit INTEGER NOT NULL DEFAULT 1,
-          max_upload_mb INTEGER NOT NULL DEFAULT 5, banned INTEGER NOT NULL DEFAULT 0,
-          reminded INTEGER NOT NULL DEFAULT 0, last_seen REAL NOT NULL DEFAULT 0);
-        CREATE TABLE IF NOT EXISTS plans(
-          id INTEGER PRIMARY KEY, name TEXT NOT NULL, price INTEGER NOT NULL,
-          duration_days INTEGER NOT NULL, bot_limit INTEGER NOT NULL,
-          description TEXT NOT NULL DEFAULT '', emoji TEXT NOT NULL DEFAULT '💎',
-          active INTEGER NOT NULL DEFAULT 1, max_upload_mb INTEGER NOT NULL DEFAULT 20);
-        CREATE TABLE IF NOT EXISTS orders(
-          id TEXT PRIMARY KEY, user_id INTEGER NOT NULL, plan_id INTEGER,
-          plan_snapshot TEXT NOT NULL, amount INTEGER NOT NULL, utr TEXT UNIQUE,
-          screenshot_file_id TEXT, screenshot_kind TEXT, status TEXT NOT NULL DEFAULT 'pending',
-          stage TEXT NOT NULL DEFAULT 'qr', reason TEXT, created_at REAL NOT NULL,
-          expires_at REAL NOT NULL, processed_by INTEGER, processed_at REAL);
-        CREATE UNIQUE INDEX IF NOT EXISTS one_pending_order ON orders(user_id) WHERE status='pending';
-        CREATE TABLE IF NOT EXISTS order_messages(order_id TEXT, chat_id INTEGER, message_id INTEGER,
-          PRIMARY KEY(order_id,chat_id,message_id));
-        CREATE TABLE IF NOT EXISTS bots(id TEXT PRIMARY KEY, user_id INTEGER NOT NULL,
-          name TEXT NOT NULL, path TEXT NOT NULL, project TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'stopped',
-          desired INTEGER NOT NULL DEFAULT 0, restarts INTEGER NOT NULL DEFAULT 0,
-          started_at REAL NOT NULL DEFAULT 0, created_at REAL NOT NULL, UNIQUE(user_id,name));
-        CREATE TABLE IF NOT EXISTS tickets(id INTEGER PRIMARY KEY, user_id INTEGER,
-          message TEXT, reply TEXT, created_at REAL, replied_by INTEGER);
-        ''')
-        # Additive migrations, backed up above, for databases created by this upgrade.
-        additions = {'users': {'last_seen':'REAL NOT NULL DEFAULT 0','reminded':'INTEGER NOT NULL DEFAULT 0'},
-                     'plans': {'max_upload_mb':'INTEGER NOT NULL DEFAULT 20'}}
-        for table, columns in additions.items():
-            have = {r[1] for r in con.execute('PRAGMA table_info('+table+')')}
-            for name, spec in columns.items():
-                if name not in have:
-                    con.execute('ALTER TABLE '+table+' ADD COLUMN '+name+' '+spec)
-        defaults = {'upi_id':'', 'payee_name':'Premium Host', 'subscription_on':'1',
-                    'free_limit':os.getenv('FREE_BOT_LIMIT','1'), 'free_upload_mb':'5',
-                    'info_text':'More bot slots, automatic crash recovery, private logs and priority support. '
-                    '24/7 hosting depends on server availability; uninterrupted uptime is not guaranteed.',
-                    'support':os.getenv('SUPPORT_CONTACT','Contact the service owner'),
-                    'maintenance':'0', 'maintenance_text':'Uploads are temporarily paused.', 'force_join':''}
-        for key,value in defaults.items():
-            con.execute('INSERT OR IGNORE INTO settings VALUES (?,?)',(key,value))
-        if not con.execute('SELECT 1 FROM settings WHERE key=?',('legacy_imported',)).fetchone():
-            for uid, data in users.items():
-                con.execute('INSERT OR IGNORE INTO users(id,legacy_json,bot_limit,banned) VALUES (?,?,?,?)',
-                            (uid,json.dumps(data,ensure_ascii=False),int(defaults['free_limit']),int(data.get('rejected',False))))
-            con.execute("INSERT INTO settings VALUES ('legacy_imported','1')")
-        if not con.execute("SELECT 1 FROM settings WHERE key='default_plans_seeded'").fetchone():
-            if not con.execute('SELECT 1 FROM plans').fetchone():
-                con.executemany('INSERT INTO plans(name,price,duration_days,bot_limit,description,emoji,active,max_upload_mb) '
-                                'VALUES (?,?,?,?,?,?,1,20)', DEFAULT_PLANS)
-            con.execute("INSERT INTO settings VALUES ('default_plans_seeded','1')")
-        con.execute('PRAGMA user_version=1')
-
-init_premium_db()
-
-@locked
-def load_data():
-    users.clear()
-    for row in rows('SELECT id,legacy_json FROM users'):
-        value = json.loads(row['legacy_json'])
-        value.setdefault('files',[])
-        value.setdefault('env_vars',{})
-        value.setdefault('approved',row['id']==OWNER_ID)
-        value.setdefault('rejected',False)
-        users[row['id']] = value
-
-@locked
-def save_data():
-    with database(True) as con:
-        for uid, value in users.items():
-            con.execute('INSERT INTO users(id,legacy_json,bot_limit) VALUES (?,?,?) '
-                        'ON CONFLICT(id) DO UPDATE SET legacy_json=excluded.legacy_json',
-                        (uid,json.dumps(value,ensure_ascii=False),int(setting('free_limit','1'))))
-
-load_data()
-
-def premium_user(uid):
-    ensure_user(uid)
-    return rows('SELECT * FROM users WHERE id=?',(uid,))[0]
-
-def active_plan(uid):
-    u = premium_user(uid)
-    return bool(u['plan'] and u['plan_expiry'] > time.time())
-
-def bot_limit(uid):
-    if uid == OWNER_ID:
-        return 10000
-    u = premium_user(uid)
-    return u['bot_limit'] if active_plan(uid) else int(setting('free_limit','1'))
-
-def upload_limit(uid):
-    u = premium_user(uid)
-    return min(20, u['max_upload_mb'] if active_plan(uid) else int(setting('free_upload_mb','5'))) * 1024**2
-
-def money(paise):
-    return format(Decimal(paise)/100, '.2f')
-
-def stamp(ts):
-    return datetime.fromtimestamp(ts,timezone.utc).strftime('%Y-%m-%d %H:%M UTC') if ts else 'Not active'
-
-def telegram(method, *args, **kwargs):
-    for attempt in range(3):
-        try:
-            return method(*args, **kwargs)
-        except Exception as exc:
-            code = getattr(exc,'error_code',0)
-            if code == 429:
-                wait = getattr(exc,'result_json',{}).get('parameters',{}).get('retry_after',2)
-                if wait > 30 or STOP_EVENT.wait(wait):
-                    raise
-                continue
-            text = str(exc).lower()
-            if 'message is not modified' in text:
-                return None
-            if code in (400,401,403,409) or attempt == 2:
-                raise
-            if STOP_EVENT.wait(2**attempt):
-                raise
-    raise RuntimeError('Telegram request was not completed')
-
-def say(chat,text,markup=None):
-    return telegram(bot.send_message,chat,text,parse_mode='HTML',reply_markup=markup)
-
-def notify(chat,text,markup=None):
-    try:
-        return say(chat,text,markup)
-    except Exception:
-        LOG.exception('Notification failed for chat %s',chat)
-
-def premium_icon():
-    return pe(CUSTOM_EMOJI_ID or PE_DIAMOND,'💎')
-
-# ---- Premium emoji send layer -------------------------------------------------
-# Wraps send_message / edit_message_text ONCE so every HTML message in the whole
-# bot (legacy handlers included) is decorated, and so a rejected custom emoji
-# degrades to plain emoji instead of losing the message.
-EMOJI_STATS = {'sent':0,'rejected':0,'last_error':''}
-_TG_EMOJI_TAG = re.compile(r'<tg-emoji[^>]*>(.*?)</tg-emoji>', re.S)
-RAW_SEND_MESSAGE = bot.send_message
-
-def strip_custom_emoji(value):
-    return _TG_EMOJI_TAG.sub(r'\1', value) if isinstance(value,str) else value
-
-def _install_emoji_layer():
-    def make(original, text_pos):
-        @functools.wraps(original)
-        def wrapper(*args, **kwargs):
-            args = list(args)
-            if kwargs.get('parse_mode') == 'HTML':
-                if 'text' in kwargs:
-                    kwargs['text'] = decorate_emojis(kwargs['text'])
-                elif len(args) > text_pos:
-                    args[text_pos] = decorate_emojis(args[text_pos])
-            used = '<tg-emoji' in repr((args, kwargs))
-            try:
-                result = original(*args, **kwargs)
-                if used:
-                    EMOJI_STATS['sent'] += 1
-                return result
-            except Exception as exc:
-                if (used and getattr(exc,'error_code',0) == 400
-                        and 'not modified' not in str(exc).lower()):
-                    EMOJI_STATS['rejected'] += 1
-                    EMOJI_STATS['last_error'] = str(exc)[:300]
-                    LOG.warning('Custom emoji rejected by Telegram, resending with plain emoji: %s', exc)
-                    return original(*[strip_custom_emoji(a) for a in args],
-                                    **{k:strip_custom_emoji(v) for k,v in kwargs.items()})
-                raise
-        wrapper._emoji_layer = True
-        return wrapper
-    for name, pos in (('send_message',1),('edit_message_text',0)):
-        current = getattr(bot, name)
-        if not getattr(current, '_emoji_layer', False):
-            setattr(bot, name, make(current, pos))
-
-_install_emoji_layer()
-
-def emoji_self_test(uid):
-    """Owner command /emojitest: sends every configured custom emoji and reports what Telegram said."""
-    sample = ' '.join(pe(i,'•') for i in PREMIUM_EMOJI_IDS)
-    try:
-        RAW_SEND_MESSAGE(uid, '🧪 <b>Custom emoji test</b>\n'+sample, parse_mode='HTML')
-        say(uid, ('✅ Telegram accepted the custom emoji entities.\n'
-                  'If the line above shows plain emojis instead of premium ones, Telegram is accepting but not '
-                  'rendering them for this bot (see deployment notes).\n'
-                  f'Sent with custom emoji: {EMOJI_STATS["sent"]} / rejected: {EMOJI_STATS["rejected"]}\n'
-                  f'ENABLE_CUSTOM_EMOJI active: {custom_emoji_enabled()}'))
-    except Exception as exc:
-        say(uid, '⚠️ Telegram rejected the custom emoji message:\n<code>'+safe_html(str(exc)[:500])+'</code>')
-
-def keyboard(*items, back='s:home', columns=2):
-    buttons = [InlineKeyboardButton(label,callback_data=data) for label,data in items]
-    layout = [buttons[i:i+columns] for i in range(0,len(buttons),columns)]
-    if back:
-        nav = [InlineKeyboardButton('🔙 Back',callback_data=back)]
-        if back != 's:home':
-            nav.append(InlineKeyboardButton('🏠 Main Menu',callback_data='s:home'))
-        layout.append(nav)
-    return InlineKeyboardMarkup(layout)
-
-def screen(call,text,markup):
-    try:
-        if getattr(call.message,'photo',None) or getattr(call.message,'document',None):
-            return say(call.message.chat.id,text,markup)
-        return telegram(bot.edit_message_text,text,chat_id=call.message.chat.id,
-                        message_id=call.message.message_id,parse_mode='HTML',reply_markup=markup)
-    except Exception as exc:
-        if getattr(exc,'error_code',0)==400:
-            return say(call.message.chat.id,text,markup)
-        raise
-
-_old_control_buttons = control_buttons
-def control_buttons(uid=None):
-    k = _old_control_buttons(uid)
-    k.row(KeyboardButton('🆘 Support'),KeyboardButton('📊 My Subscription'))
-    k.row(KeyboardButton('💎 Subscription'))
-    return k
-
-_old_owner_markup = owner_markup
-def owner_markup():
-    k = _old_owner_markup()
-    k.row(InlineKeyboardButton('💎 Subscription Manager',callback_data='s:manager'))
-    return k
-
-def set_state(uid,mode,**data):
-    with UI_LOCK:
-        UI_STATE[uid] = dict(mode=mode,at=time.time(),**data)
-
-def clear_state(uid):
-    with UI_LOCK:
-        UI_STATE.pop(uid,None)
-    env_waiting_users.pop(uid,None)
-    install_waiting_users.pop(uid,None)
-    owner_waiting.pop(uid,None)
-
-def plans_list():
-    return rows('SELECT * FROM plans WHERE active=1 ORDER BY price,id')
-
-def subscription_text(uid):
-    text = f'{premium_icon()} <b>PREMIUM HOST SUBSCRIPTIONS</b>\n━━━━━━━━━━━━━━━━\n'
-    text += safe_html(setting('info_text')) + '\n\n<b>Free plan</b>\n'
-    text += f'{setting("free_limit")} simultaneous bot(s), {setting("free_upload_mb")} MB uploads.\n\n<b>Available plans</b>\n'
-    for p in plans_list():
-        text += (f'{safe_html(p["emoji"])} <b>{safe_html(p["name"])}</b> - ₹{money(p["price"])} / '
-                 f'{p["duration_days"]} days / {p["bot_limit"]} bots / {min(20,p["max_upload_mb"])} MB\n'
-                 f'{safe_html(p["description"])}\n\n')
-    text += ('━━━━━━━━━━━━━━━━\n<b>Included hosting tools</b>\n'
-             'Automatic crash restart with backoff, private live logs, environment editor and bot controls. '
-             'Paid plans receive priority support and a shorter restart delay.\n\n'
-             '<b>Payment rules</b>\nPlans start only after manual approval. Payments are non-refundable '
-             'after activation, subject to applicable law. Fake or edited proof may lead to a ban. '
-             'Verify the payee before paying. An expired order does not reverse a real payment; contact support.\n\n'
-             'Approval target: 5 to 10 minutes, not a guaranteed deadline.\n'
-             'Support: '+safe_html(setting('support')))
-    return text
-
-def show_subscription(uid,call=None):
-    text = subscription_text(uid)
-    markup = keyboard(('✅ I AGREE','s:plans'),('📊 My Subscription','s:mine'))
-    chunks = []
-    current = ''
-    for line in text.splitlines(keepends=True):
-        if current and len(current)+len(line)>3600:
-            chunks.append(current)
-            current = ''
-        current += line
-    if current:
-        chunks.append(current)
-    for index,chunk in enumerate(chunks):
-        buttons = markup if index==len(chunks)-1 else None
-        if call and index==0:
-            screen(call,chunk,buttons)
-        else:
-            say(uid,chunk,buttons)
-
-def select_plan(call):
-    items = [(f'{p["emoji"]} ₹{money(p["price"])} - {p["name"]} - {p["bot_limit"]} BOTS',f's:plan:{p["id"]}') for p in plans_list()]
-    screen(call,'💎 <b>Choose your plan</b>' if items else 'No plans are currently available.',keyboard(*items,back='s:info'))
-
-def my_subscription(uid):
-    u = premium_user(uid)
-    running = len(rows('SELECT id FROM bots WHERE user_id=? AND desired=1',(uid,)))
-    history = rows('SELECT id,status,amount FROM orders WHERE user_id=? ORDER BY created_at DESC LIMIT 5',(uid,))
-    name = u['plan'] if active_plan(uid) else 'Free'
-    text = (f'📊 <b>MY SUBSCRIPTION</b>\nPlan: {safe_html(name)}\nBots: {running}/{bot_limit(uid)}\n'
-            f'Expiry: {stamp(u["plan_expiry"])}\nDays left: {max(0,int((u["plan_expiry"]-time.time())/86400))}\n\n<b>Last 5 orders</b>\n')
-    text += '\n'.join(f'<code>{o["id"]}</code> - {o["status"]} - ₹{money(o["amount"])}' for o in history) or 'No orders.'
-    return text
-
-def create_order(uid,pid):
-    with database(True) as con:
-        con.execute("UPDATE orders SET status='expired' WHERE status='pending' AND stage!='review' AND expires_at<=?",(time.time(),))
-        if con.execute("SELECT 1 FROM orders WHERE user_id=? AND status='pending'",(uid,)).fetchone():
-            raise ValueError('You already have a pending order. Use My Subscription or cancel it first.')
-        p = con.execute('SELECT * FROM plans WHERE id=? AND active=1',(pid,)).fetchone()
-        if not p:
-            raise ValueError('This plan is no longer available.')
-        oid = secrets.token_hex(6).upper()
-        now = time.time()
-        con.execute('INSERT INTO orders(id,user_id,plan_id,plan_snapshot,amount,created_at,expires_at) VALUES (?,?,?,?,?,?,?)',
-                    (oid,uid,pid,json.dumps(dict(p)),p['price'],now,now+ORDER_TTL))
-        return oid
-
-def get_order(oid,uid=None):
-    result = rows('SELECT * FROM orders WHERE id=?',(oid,))
-    if not result or (uid is not None and result[0]['user_id'] != uid):
-        raise ValueError('Order not found.')
-    o = result[0]
-    if o['status']=='pending' and o['stage']!='review' and o['expires_at']<=time.time():
-        execute("UPDATE orders SET status='expired' WHERE id=? AND status='pending' AND stage!='review'",(oid,))
-        o['status']='expired'
-    return o
-
-def pending_order(uid):
-    data = rows("SELECT id FROM orders WHERE user_id=? AND status='pending'",(uid,))
-    if data:
-        o = get_order(data[0]['id'],uid)
-        return o if o['status']=='pending' else None
-    return None
-
-def qr_payment(call,pid):
-    if setting('subscription_on')!='1':
-        raise ValueError('Subscriptions are temporarily unavailable.')
-    upi = setting('upi_id')
-    if not re.fullmatch(r'[A-Za-z0-9._-]+@[A-Za-z0-9.-]+',upi):
-        raise ValueError('The owner has not configured a valid UPI ID.')
-    import qrcode
-    # Render before committing the order: failed image creation cannot block checkout.
-    candidates = rows('SELECT * FROM plans WHERE id=? AND active=1',(pid,))
-    if not candidates:
-        raise ValueError('Plan unavailable.')
-    oid = create_order(call.from_user.id,pid)
-    o = get_order(oid)
-    p = json.loads(o['plan_snapshot'])
-    uri = 'upi://pay?'+urlencode({'pa':upi,'pn':setting('payee_name'),'am':money(o['amount']),'cu':'INR','tn':'HOST '+oid})
-    try:
-        image = qrcode.QRCode(version=None,error_correction=qrcode.constants.ERROR_CORRECT_M,box_size=10,border=4)
-        image.add_data(uri)
-        image.make(fit=True)
-        stream = BytesIO()
-        image.make_image(fill_color='black',back_color='white').save(stream,format='PNG')
-        stream.seek(0)
-        stream.name = 'payment.png'
-        caption = (f'💎 <b>{safe_html(p["name"])}</b>\n₹{money(o["amount"])} / {p["duration_days"]} days\n'
-                   f'Pay to: <code>{safe_html(upi)}</code>\nOrder: <code>{oid}</code>\n\n'
-                   '1. Scan and pay the exact amount.\n2. Copy the UTR / Transaction ID.\n'
-                   '3. Tap I HAVE PAID and send the UTR.\n4. Send the payment screenshot.\n'
-                   '5. Wait for manual approval (target 5 to 10 minutes).\n\n'
-                   f'Proof deadline: {stamp(o["expires_at"])}. Do not pay after this deadline. '
-                   'Expired QR images remain payable in UPI apps; this bot cannot invalidate them.')
-        telegram(bot.send_photo,call.message.chat.id,stream,caption=caption,parse_mode='HTML',
-                 reply_markup=keyboard(('📤 I HAVE PAID',f's:paid:{oid}'),('❌ CANCEL',f's:cancel:{oid}'),back='s:plans'))
-    except Exception:
-        execute("UPDATE orders SET status='cancelled',reason='QR delivery failed' WHERE id=? AND stage='qr'",(oid,))
-        raise
-
-def receive_utr(uid,text,oid):
-    utr = text.strip().upper()
-    if not re.fullmatch(r'[A-Z0-9]{12,22}',utr):
-        raise ValueError('Send 12 to 22 letters or digits for the UTR / Transaction ID.')
-    with database(True) as con:
-        try:
-            cursor = con.execute("UPDATE orders SET utr=?,stage='screenshot' WHERE id=? AND user_id=? AND status='pending' AND stage='utr' AND expires_at>?",
-                                 (utr,oid,uid,time.time()))
-            if cursor.rowcount!=1:
-                raise ValueError('This payment step is no longer active.')
-        except sqlite3.IntegrityError:
-            raise ValueError('That UTR has already been used. Contact support if this is a mistake.') from None
-
-def send_review(oid):
-    o = get_order(oid)
-    if o['status']!='pending' or o['stage']!='review':
-        raise ValueError('This order is not awaiting review.')
-    p = json.loads(o['plan_snapshot'])
-    u = users.get(o['user_id'],{})
-    text = (f'💳 <b>PAYMENT REVIEW</b>\nOrder: <code>{oid}</code>\n'
-            f'User: {safe_html(u.get("name","User"))}\nUsername: {safe_html(u.get("username","Not supplied"))}\n'
-            f'ID: <code>{o["user_id"]}</code>\nPlan: {safe_html(p["name"])}\n'
-            f'Amount: ₹{money(o["amount"])}\nDuration: {p["duration_days"]} days\n'
-            f'UTR: <code>{safe_html(o["utr"])}</code>\nRequested: {stamp(o["created_at"])}\n'
-            '<b>Check the actual bank credit; screenshots alone are not payment verification.</b>')
-    for admin in ADMIN_IDS:
-        try:
-            method = bot.send_photo if o['screenshot_kind']=='photo' else bot.send_document
-            msg = telegram(method,admin,o['screenshot_file_id'],caption=text,parse_mode='HTML',
-                           reply_markup=keyboard(('✅ APPROVE',f's:approve:{oid}'),('❌ REJECT',f's:reject:{oid}'),back=None))
-            execute('INSERT OR IGNORE INTO order_messages VALUES (?,?,?)',(oid,admin,msg.message_id))
-        except Exception:
-            LOG.exception('Review delivery failed; order remains accessible in manager')
-
-def process_order(oid,admin,approve,reason='Not verified'):
-    if admin not in ADMIN_IDS:
-        raise ValueError('Admin access required.')
-    with STATE_LOCK:
-        with database(True) as con:
-            row = con.execute('SELECT * FROM orders WHERE id=?',(oid,)).fetchone()
-            if not row or row['status']!='pending' or row['stage']!='review':
-                raise ValueError('This order was already processed or has no proof.')
-            o = dict(row)
-            p = json.loads(o['plan_snapshot'])
-            now = time.time()
-            status = 'approved' if approve else 'rejected'
-            if approve:
-                u = con.execute('SELECT * FROM users WHERE id=?',(o['user_id'],)).fetchone()
-                if not u or u['banned']:
-                    raise ValueError('The user is banned or missing. Resolve their account first.')
-                expiry = max(now,u['plan_expiry']) + p['duration_days']*86400
-                con.execute('UPDATE users SET plan=?,plan_expiry=?,bot_limit=?,max_upload_mb=?,reminded=0 WHERE id=?',
-                            (p['name'],expiry,p['bot_limit'],p['max_upload_mb'],o['user_id']))
-            con.execute('UPDATE orders SET status=?,reason=?,processed_by=?,processed_at=? WHERE id=?',
-                        (status,reason[:500],admin,now,oid))
-    if approve:
-        notify(o['user_id'],f'✅ <b>Subscription activated</b>\n{safe_html(p["name"])}\nBot limit: {p["bot_limit"]}\nExpiry: {stamp(expiry)}')
-        enforce_limit(o['user_id'])
-    else:
-        notify(o['user_id'],f'❌ Payment rejected.\nReason: {safe_html(reason)}\nSupport: {safe_html(setting("support"))}')
-    for m in rows('SELECT * FROM order_messages WHERE order_id=?',(oid,)):
-        try:
-            telegram(bot.edit_message_caption,chat_id=m['chat_id'],message_id=m['message_id'],
-                     caption=f'{status.upper()} by {admin} at {stamp(now)}\nOrder {oid}\n{reason[:300]}',reply_markup=None)
-        except Exception:
-            LOG.exception('Could not update review message')
-    return status
-
-# Container runtime. An entire project is mounted into exactly one unprivileged
-# container. Host credentials and filesystem are not mounted. Rootless Docker,
-# seccomp/AppArmor, cgroup v2, disk quotas and a dedicated machine are required.
-def docker_cmd(args,timeout=30,check=True):
-    result = subprocess.run(['docker',*args],capture_output=True,text=True,timeout=timeout)
-    if check and result.returncode:
-        raise RuntimeError((result.stderr or result.stdout)[-1500:])
-    return result
-
-def verify_docker():
-    global DOCKER_READY
-    if os.getuid()==0:
-        raise RuntimeError('Run the controller as a dedicated non-root Linux account with rootless Docker.')
-    info = json.loads(docker_cmd(['info','--format','{{json .}}']).stdout)
-    if not any('rootless' in x for x in info.get('SecurityOptions',[])):
-        raise RuntimeError('Rootless Docker is required. Configure it before enabling hosting.')
-    if info.get('CgroupVersion')!='2' or info.get('MemoryLimit') is False or info.get('PidsLimit') is False:
-        raise RuntimeError('Rootless Docker needs cgroup v2 with memory and PID limits delegated.')
-    for image in (PYTHON_IMAGE,NODE_IMAGE):
-        docker_cmd(['image','inspect',image])
-    DOCKER_READY = True
-
-def project_path(uid,name):
-    root = Path(user_folder(uid)).resolve()
-    path = (root/name).resolve()
-    if path==root or root not in path.parents:
-        raise ValueError('Invalid project path.')
-    return path
-
-def bot_record(uid,name):
-    result = rows('SELECT * FROM bots WHERE user_id=? AND name=?',(uid,name))
-    if result:
-        return result[0]
-    path = project_path(uid,name)
-    if name not in users[uid].get('files',[]) or not path.is_file():
-        raise ValueError('File not found.')
-    bid = hashlib.sha256(f'{uid}:{name}'.encode()).hexdigest()[:20]
-    execute('INSERT OR IGNORE INTO bots(id,user_id,name,path,project,created_at) VALUES (?,?,?,?,?,?)',
-            (bid,uid,name,str(path),str(Path(user_folder(uid)).resolve()),time.time()))
-    return rows('SELECT * FROM bots WHERE id=?',(bid,))[0]
-
-def owned_bot(uid,bid):
-    result = rows('SELECT * FROM bots WHERE id=? AND user_id=?',(bid,uid))
-    if not result:
-        raise ValueError('Bot not found.')
-    return result[0]
-
-def container_name(bid):
-    return 'premiumhost-'+bid
-
-def secure_project_read(record, relative, maximum=1_000_000):
-    """Walk from a host-owned user root with no symlink following, including parents."""
-    base = Path(user_folder(record['user_id'])).absolute()
-    project = Path(record['project']).absolute()
-    parts = list(project.relative_to(base).parts) + list(PurePosixPath(relative).parts)
-    if not parts or any(p in ('..','') or '/' in p or '\\' in p for p in parts):
-        raise ValueError('Invalid project file path.')
-    fd = os.open(base, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
-    try:
-        for part in parts[:-1]:
-            nxt = os.open(part,os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW,dir_fd=fd)
-            os.close(fd)
-            fd = nxt
-        leaf = os.open(parts[-1],os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK,dir_fd=fd)
-        try:
-            import stat
-            if not stat.S_ISREG(os.fstat(leaf).st_mode):
-                raise ValueError('Only regular project files can be read.')
-            with os.fdopen(leaf,'rb',closefd=False) as stream:
-                content = stream.read(maximum+1)
-            if len(content)>maximum:
-                raise ValueError('Project file is too large.')
-            return content
-        finally:
-            os.close(leaf)
-    finally:
-        os.close(fd)
-
-def container_base(record):
-    project = Path(record['project']).resolve()
-    root = Path(user_folder(record['user_id'])).resolve()
-    if project!=root and (project.parent!=root or not project.name.startswith('p_')):
-        raise ValueError('Invalid project directory. Reupload this legacy project as a ZIP.')
-    # --mount syntax rejects commas in source paths; upload names are sanitized.
-    if ',' in str(project):
-        raise ValueError('The storage path cannot contain commas.')
-    return ['run','--rm','--name',container_name(record['id']),
-            '--label','premiumhost.managed=1','--read-only','--cap-drop=ALL',
-            '--security-opt=no-new-privileges','--user','0:0',
-            '--memory',f'{MEMORY_MB}m','--memory-swap',f'{MEMORY_MB}m',
-            '--cpus',str(BOT_CPUS),'--pids-limit',str(BOT_PIDS),
-            '--ulimit','nofile=256:256','--ulimit','fsize=52428800:52428800',
-            '--tmpfs','/tmp:rw,nosuid,nodev,size=64m,mode=1777',
-            '--mount',f'type=bind,source={project},target=/app',
-            '--workdir','/app','--log-driver=none',
-            '--env','HOME=/tmp','--env','PYTHONUNBUFFERED=1',
-            '--env','PYTHONPATH=/app/.packages:/app', '--env','PYTHONDONTWRITEBYTECODE=1']
-
-def write_env_file(uid,filename):
-    # Per-file variables stay in the database, not a shared .env on the host.
-    return None
-
-def install_requirements(folder):
-    # Never execute pip on the controller. Installation occurs in the job container.
-    return None
-
-def live_install(cmd_list,chat_id,message_id,description):
-    raise ValueError('Host-wide package installation is disabled. Use a bot dashboard > Install packages.')
-
-def start_script(user_id,file_path):
-    if not DOCKER_READY:
-        raise ValueError('Hosting unavailable: rootless Docker checks have not passed. Contact the owner.')
-    ensure_user(user_id)
-    if premium_user(user_id)['banned'] or not is_approved(user_id):
-        raise ValueError('Your account is not approved for hosting.')
-    name = str(Path(file_path).resolve().relative_to(Path(user_folder(user_id)).resolve())).replace(os.sep,'/')
-    r = bot_record(user_id,name)
-    if Path(r['path']).suffix.lower() not in ('.py','.js'):
-        raise ValueError('This is a stored file, not a Python or JavaScript entry point.')
-    with RUN_LOCK:
-        if r['id'] in RUNTIME or r['id'] in INSTALLING:
-            raise ValueError('This bot is already running, installing, or restarting.')
-        count = len(rows('SELECT id FROM bots WHERE user_id=? AND desired=1',(user_id,)))
-        if not r['desired'] and count >= bot_limit(user_id):
-            raise ValueError('Your simultaneous bot limit has been reached. Stop a bot or upgrade.')
-        execute("UPDATE bots SET desired=1,status='restarting' WHERE id=?",(r['id'],))
-        event = threading.Event()
-        RUNTIME[r['id']] = event
-        threading.Thread(target=container_worker,args=(r,event),daemon=True).start()
-
-def stop_script(user_id,file_path):
-    name = str(Path(file_path).resolve().relative_to(Path(user_folder(user_id)).resolve())).replace(os.sep,'/')
-    result = rows('SELECT * FROM bots WHERE user_id=? AND name=?',(user_id,name))
-    if not result:
-        return False
-    r = result[0]
-    with RUN_LOCK:
-        execute("UPDATE bots SET desired=0,status='stopped' WHERE id=?",(r['id'],))
-        event = RUNTIME.get(r['id'])
-        if event:
-            event.set()
-    # Worker checks the event after spawn too, closing a stop-before-spawn race.
-    if DOCKER_READY:
-        docker_cmd(['stop','--time','8',container_name(r['id'])],timeout=15,check=False)
-    return bool(event)
-
-def append_log(user_id,file_path,line,proc=None):
-    line = str(line)[:4096]
-    with STATE_LOCK:
-        buf = logs_store.setdefault(user_id,{}).setdefault(file_path,[])
-        buf.append(line)
-        del buf[:-150]
-
-def container_worker(r,event):
-    uid,path,bid = r['user_id'],r['path'],r['id']
-    crashes = deque()
-    dependencies_ready = False
-    proc = None
-    try:
-        while not event.is_set() and not STOP_EVENT.is_set():
-            if premium_user(uid)['banned'] or not is_approved(uid):
-                break
-            try:
-                if not dependencies_ready:
-                    prepare_dependencies(r)
-                    dependencies_ready = True
-                if event.is_set() or STOP_EVENT.is_set():
-                    break
-                docker_cmd(['rm','-f',container_name(bid)],check=False)
-                command = container_base(r)
-                env = {}
-                try:
-                    env.update(parse_env_text(secure_project_read(r,'.env',65536).decode('utf-8',errors='replace')))
-                except FileNotFoundError:
-                    pass
-                env.update(get_file_env(uid,r['name']))
-                for k,v in env.items():
-                    if ENV_KEY_RE.fullmatch(str(k)):
-                        command += ['--env',f'{k}={v}']
-                entry = str(Path(path).relative_to(Path(r['project'])))
-                if path.endswith('.py'):
-                    command += [PYTHON_IMAGE,'python','-u',entry]
-                else:
-                    command += [NODE_IMAGE,'node',entry]
-                with RUN_LOCK:
-                    if event.is_set() or STOP_EVENT.is_set():
-                        break
-                    proc = subprocess.Popen(['docker',*command],stdout=subprocess.PIPE,stderr=subprocess.STDOUT,
-                                            stdin=subprocess.DEVNULL,text=True,errors='replace',bufsize=1)
-                    active_scripts.setdefault(uid,{})[path] = proc
-                # Docker CLI may be alive before the container is created. 'running' is
-                # confirmed via inspect by dashboard; DB state here is optimistic startup.
-                execute("UPDATE bots SET status='running',started_at=? WHERE id=?",(time.time(),bid))
-                for line in iter(lambda: proc.stdout.readline(4096),''):
-                    append_log(uid,path,line.rstrip())
-                code = proc.wait()
-                if event.is_set() or STOP_EVENT.is_set() or code==0:
-                    break
-                raise RuntimeError(f'Container exited with code {code}')
-            except Exception as exc:
-                LOG.exception('Job failed: %s',bid)
-                append_log(uid,path,str(exc))
-                now = time.time()
-                crashes.append(now)
-                while crashes and crashes[0] < now-600:
-                    crashes.popleft()
-                execute("UPDATE bots SET restarts=restarts+1,status='restarting' WHERE id=?",(bid,))
-                if len(crashes)>=5:
-                    notify(uid,'⚠️ Bot stopped after 5 failures in 10 minutes. Check logs before restarting.')
-                    break
-                if event.wait(min(120,(2 if active_plan(uid) else 5)*2**(len(crashes)-1))):
-                    break
-            finally:
-                with STATE_LOCK:
-                    active_scripts.get(uid,{}).pop(path,None)
-                if proc and proc.stdout:
-                    proc.stdout.close()
-                proc = None
-    finally:
-        try:
-            if DOCKER_READY:
-                docker_cmd(['rm','-f',container_name(bid)],check=False)
-        except Exception:
-            LOG.exception('Container cleanup failed')
-        with RUN_LOCK:
-            RUNTIME.pop(bid,None)
-            if STOP_EVENT.is_set():
-                execute("UPDATE bots SET status='stopped' WHERE id=?",(bid,))
-            else:
-                execute("UPDATE bots SET status='stopped',desired=0 WHERE id=?",(bid,))
-
-def enforce_limit(uid):
-    records = rows('SELECT * FROM bots WHERE user_id=? AND desired=1 ORDER BY created_at,id',(uid,))
-    limit = 0 if premium_user(uid)['banned'] else bot_limit(uid)
-    for r in records[limit:]:
-        stop_script(uid,r['path'])
-    if len(records)>limit:
-        notify(uid,f'⚠️ Your limit is now {limit} running bot(s). Extra bots were stopped; their files were kept.')
-
-def safety_scan(data,name):
-    if Path(name).suffix.lower() not in ('.py','.js','.sh','.txt'):
-        return
-    text = data.decode('utf-8',errors='replace')
-    patterns = [r'rm\s+-rf\s+/',r'os\.environ',r'process\.env',r'fork\s*\(',r'xmrig',r'/var/run/docker.sock',r'/proc/1/',r'/etc/shadow']
-    # Environment use is normal for bots; only reject enumeration of all values.
-    patterns[1] = r'os\.environ\.(?:items|values|copy)\s*\('
-    patterns[2] = r'JSON\.stringify\(process\.env\)'
-    for pattern in patterns:
-        if re.search(pattern,text,re.I):
-            raise ValueError('Basic safety scan flagged '+pattern+'. Ask support for a review.')
-
-def safe_zip(data,destination):
-    total = 0
-    with zipfile.ZipFile(BytesIO(data)) as archive:
-        members = archive.infolist()
-        if len(members)>1000:
-            raise ValueError('Archive has too many entries (maximum 1000).')
-        for m in members:
-            p = PurePosixPath(m.filename)
-            mode = m.external_attr >> 16
-            if (p.is_absolute() or '..' in p.parts or '\\' in m.filename or ':' in m.filename
-                    or '\x00' in m.filename or (mode & 0o170000)==0o120000):
-                raise ValueError('Unsafe archive path or symlink.')
-            total += m.file_size
-            if total>MAX_PROJECT_MB*1024**2 or m.file_size>50*1024**2 or (m.file_size/max(1,m.compress_size))>150:
-                raise ValueError('Archive exceeds extraction limits.')
-        extracted = []
-        for m in members:
-            target = (destination/m.filename).resolve()
-            if destination.resolve() not in target.parents and target!=destination.resolve():
-                raise ValueError('Unsafe archive path.')
-            if m.is_dir():
-                target.mkdir(parents=True,exist_ok=True)
-            else:
-                body = archive.read(m)
-                safety_scan(body,m.filename)
-                target.parent.mkdir(parents=True,exist_ok=True)
-                target.write_bytes(body)
-                extracted.append(target)
-    return extracted
-
-def handle_upload(message):
-    uid = message.from_user.id
-    if approval_required(message):
-        return
-    if setting('maintenance')=='1' and uid!=OWNER_ID:
-        raise ValueError(setting('maintenance_text'))
-    doc = message.document
-    if (doc.file_size or 0)>upload_limit(uid):
-        raise ValueError(f'Upload exceeds your limit of {upload_limit(uid)//1024**2} MB.')
-    name = re.sub(r'[^A-Za-z0-9._-]','_',os.path.basename(doc.file_name or 'uploaded.bin'))[:100]
-    if name in ('.','..',''):
-        raise ValueError('Invalid filename.')
-    if len(users[uid]['files'])>=200:
-        raise ValueError('Storage file listing is full. Delete unused projects first.')
-    if dir_size(user_folder(uid))>MAX_PROJECT_MB*1024**2:
-        raise ValueError('Your project storage quota is full. Delete unused files.')
-    info = telegram(bot.get_file,doc.file_id)
-    data = telegram(bot.download_file,info.file_path)
-    if len(data)>upload_limit(uid):
-        raise ValueError('Actual upload size exceeds your plan limit.')
-    safety_scan(data,name)
-    project = Path(user_folder(uid))/('p_'+secrets.token_hex(5))
-    project.mkdir(mode=0o700)
-    try:
-        if name.lower().endswith('.zip'):
-            files = safe_zip(data,project)
-        else:
-            target = project/name
-            target.write_bytes(data)
-            files = [target]
-        entries = [p for p in files if p.suffix.lower() in ('.py','.js')]
-        priority = {'bot.py':0,'main.py':1,'app.py':2,'index.js':3,'bot.js':4}
-        entries.sort(key=lambda p:(priority.get(p.name,20),len(p.parts),str(p)))
-        visible = entries or files[:30]
-        if len(visible)+len(users[uid]['files'])>200:
-            raise ValueError('Too many files. Upload fewer entry points.')
-        for path in visible:
-            relative = path.relative_to(Path(user_folder(uid))).as_posix()
-            users[uid]['files'].append(relative)
-            record = bot_record(uid,relative)
-            execute('UPDATE bots SET project=? WHERE id=?',(str(project.resolve()),record['id']))
-        if dir_size(user_folder(uid))>MAX_PROJECT_MB*1024**2:
-            raise ValueError('Project exceeds your total storage quota.')
-        save_data()
-        text = ('✅ Project stored. Choose an entry point from the dashboard. '
-                'Dependencies are prepared automatically inside its container; Install packages forces a refresh. '
-                'RAR/7z and other non-executable formats are stored, not extracted.')
-        say(uid,text,keyboard(('📁 Dashboard','s:dashboard')))
-    except Exception:
-        prefix = project.name+'/'
-        users[uid]['files'] = [n for n in users[uid]['files'] if not n.startswith(prefix)]
-        execute('DELETE FROM bots WHERE user_id=? AND project=?',(uid,str(project.resolve())))
-        save_data()
-        shutil.rmtree(project,ignore_errors=True)
-        raise
-
-def dashboard(call):
-    uid = call.from_user.id
-    for name in list(users[uid]['files']):
-        try:
-            bot_record(uid,name)
-        except (ValueError,OSError):
-            continue
-    data = rows('SELECT * FROM bots WHERE user_id=? ORDER BY created_at DESC LIMIT 60',(uid,))
-    buttons = []
-    for r in data:
-        icon = {'running':'🟢','restarting':'🟡'}.get(r['status'],'🔴')
-        buttons.append((f'{icon} {r["name"][-45:]}',f's:bot:{r["id"]}'))
-    screen(call,f'📁 <b>Bot dashboard</b>\nSimultaneous limit: {bot_limit(uid)}\nShowing latest 60 files.',keyboard(*buttons))
-
-def bot_screen(call,r):
-    uptime_s = int(max(0,time.time()-r['started_at'])) if r['desired'] else 0
-    status = r['status']
-    if DOCKER_READY and r['desired']:
-        result = docker_cmd(['inspect','--format','{{.State.Running}}',container_name(r['id'])],check=False)
-        if result.stdout.strip()!='true':
-            status = 'restarting'
-    items = [('▶️ Start',f's:run:{r["id"]}'),('⏹ Stop',f's:stop:{r["id"]}'),
-             ('🔄 Restart',f's:restart:{r["id"]}'),('📜 Logs',f's:logs:{r["id"]}'),
-             ('⚙️ Environment',f's:env:{r["id"]}'),('📦 Install packages',f's:install:{r["id"]}'),
-             ('🔄 Update file',f's:update:{r["id"]}'),('🗑 Delete file',f's:delete:{r["id"]}')]
-    if Path(r['project']).name.startswith('p_') and Path(r['project']).parent==Path(user_folder(r['user_id'])).resolve():
-        items.append(('🗑 Delete entire project',f's:deleteproject:{r["id"]}'))
-    screen(call,f'<b>{safe_html(r["name"])}</b>\nStatus: {status}\nUptime: {uptime_s}s\nTotal restarts: {r["restarts"]}',keyboard(*items,back='s:dashboard'))
-
-def package_install(r,uid):
-    if not DOCKER_READY:
-        raise ValueError('Rootless Docker is unavailable.')
-    if r['id'] in RUNTIME:
-        raise ValueError('Stop this bot before installing dependencies.')
-    def worker():
-        try:
-            notify(uid,'📦 Installing inside the isolated project container. Binary wheels only; no source builds.')
-            req = Path(r['project'])/'requirements.txt'
-            if req.exists():
-                packages = []
-                for line in secure_project_read(r,'requirements.txt').decode('utf-8').splitlines():
-                    line = line.strip()
-                    if not line or line.startswith('#'):
-                        continue
-                    if not re.fullmatch(r'[A-Za-z0-9_.-]+(?:\[[A-Za-z0-9_,.-]+\])?(?:[<>=!~]{1,2}[A-Za-z0-9*+_.-]+(?:,[<>=!~]{1,2}[A-Za-z0-9*+_.-]+)*)?',line):
-                        raise ValueError('Only package names and version constraints are accepted in requirements.txt.')
-                    packages.append(line)
-            elif r['path'].endswith('.py'):
-                tree = ast.parse(secure_project_read(r,Path(r['path']).relative_to(Path(r['project'])).as_posix()).decode('utf-8'))
-                imports = {n.names[0].name.split('.')[0] for n in ast.walk(tree) if isinstance(n,ast.Import)}
-                imports.update(n.module.split('.')[0] for n in ast.walk(tree) if isinstance(n,ast.ImportFrom) and n.module and n.level==0)
-                mapping = {'telebot':'pyTelegramBotAPI','PIL':'Pillow','dotenv':'python-dotenv','bs4':'beautifulsoup4','cv2':'opencv-python-headless'}
-                local = {p.stem for p in Path(r['project']).glob('*.py')}
-                packages = [mapping.get(x,x) for x in sorted(imports-set(sys.stdlib_module_names)-local)]
-            else:
-                raise ValueError('For JavaScript, upload preinstalled dependencies in the project ZIP; automatic npm scripts are disabled.')
-            if not packages:
-                notify(uid,'No external Python packages detected.')
-                return
-            command = container_base(r)
-            command[command.index(container_name(r['id']))] += '-install'
-            command += [PYTHON_IMAGE,'python','-m','pip','install','--disable-pip-version-check','--no-cache-dir',
-                        '--only-binary=:all:','--target','/app/.packages',*packages]
-            result = docker_cmd(command,timeout=300)
-            notify(uid,'✅ Packages installed.\n<pre>'+safe_html(result.stdout[-2000:])+'</pre>')
-        except Exception as exc:
-            LOG.exception('Package install failed')
-            notify(uid,'Package installation failed: '+safe_html(str(exc)[-1000:]))
-        finally:
-            docker_cmd(['rm','-f',container_name(r['id'])+'-install'],check=False)
-    threading.Thread(target=worker,daemon=True).start()
-
-# Isolated dependency preparation, shared by automatic startup and manual action.
-INSTALLING = set()
-
-def prepare_dependencies(r,force=False):
-    project = Path(r['project'])
-    is_python = r['path'].endswith('.py')
-    dependencies = []
-    if is_python:
-        try:
-            raw = secure_project_read(r,'requirements.txt',65536)
-        except FileNotFoundError:
-            raw = b''
-        if raw:
-            for line in raw.decode('utf-8').splitlines():
-                line = line.strip()
-                if not line or line.startswith('#'):
-                    continue
-                if not re.fullmatch(r'[A-Za-z0-9_.-]+(?:\[[A-Za-z0-9_,.-]+\])?(?:[<>=!~]{1,2}[A-Za-z0-9*+_.-]+(?:,[<>=!~]{1,2}[A-Za-z0-9*+_.-]+)*)?',line):
-                    raise ValueError('Requirements may contain only package names and version constraints, not URLs or pip options.')
-                dependencies.append(line)
-        else:
-            relative = Path(r['path']).relative_to(project).as_posix()
-            tree = ast.parse(secure_project_read(r,relative).decode('utf-8'))
-            imports = set()
-            for node in ast.walk(tree):
-                if isinstance(node,ast.Import):
-                    imports.update(alias.name.split('.')[0] for alias in node.names)
-                elif isinstance(node,ast.ImportFrom) and node.module and node.level==0:
-                    imports.add(node.module.split('.')[0])
-            mapping = {'telebot':'pyTelegramBotAPI','PIL':'Pillow','dotenv':'python-dotenv',
-                       'bs4':'beautifulsoup4','cv2':'opencv-python-headless','yaml':'PyYAML'}
-            local = {p.stem for p in project.iterdir()}
-            dependencies = [mapping.get(x,x) for x in sorted(imports-set(sys.stdlib_module_names)-local)]
-        if not dependencies:
-            return
-        if len(dependencies)>100:
-            raise ValueError('Maximum 100 direct dependency entries per project.')
-        fingerprint = hashlib.sha256((PYTHON_IMAGE+'\n'+'\n'.join(dependencies)).encode()).hexdigest()
-        command_tail = [PYTHON_IMAGE,'python','-m','pip','install','--disable-pip-version-check',
-                        '--no-cache-dir','--only-binary=:all:','--upgrade','--target','/app/.packages',*dependencies]
-    else:
-        try:
-            raw = secure_project_read(r,'package.json',65536)
-        except FileNotFoundError:
-            return
-        package = json.loads(raw)
-        if not isinstance(package,dict):
-            raise ValueError('package.json must be an object.')
-        try:
-            lock = secure_project_read(r,'package-lock.json',2_000_000)
-            subcommand = 'ci'
-        except FileNotFoundError:
-            lock = b''
-            subcommand = 'install'
-        fingerprint = hashlib.sha256(NODE_IMAGE.encode()+raw+lock).hexdigest()
-        command_tail = [NODE_IMAGE,'npm',subcommand,'--ignore-scripts','--no-audit','--no-fund','--omit=dev','--cache=/tmp/npm-cache']
-    marker = '.premium-dependencies.sha256'
-    try:
-        if not force and secure_project_read(r,marker,100).decode()==fingerprint:
-            return
-    except FileNotFoundError:
-        pass
-    bid = r['id']
-    with RUN_LOCK:
-        if bid in INSTALLING:
-            raise ValueError('Dependencies are already being installed for this bot.')
-        INSTALLING.add(bid)
-    notify(r['user_id'],'📦 Preparing dependencies in the project container. Python source builds and npm lifecycle scripts are disabled.')
-    try:
-        command = container_base(r)
-        command[command.index(container_name(bid))] += '-install'
-        # Host environment is never passed to dependency installation.
-        result = docker_cmd(command+command_tail,timeout=300)
-        append_log(r['user_id'],r['path'],result.stdout[-3000:])
-        # Use exclusive no-follow open to avoid writing through job-created symlinks.
-        marker_path = project/marker
-        try:
-            marker_path.unlink()
-        except FileNotFoundError:
-            pass
-        fd = os.open(marker_path,os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW,0o600)
-        with os.fdopen(fd,'w') as stream:
-            stream.write(fingerprint)
-    finally:
-        try:
-            docker_cmd(['rm','-f',container_name(bid)+'-install'],check=False)
-        finally:
-            with RUN_LOCK:
-                INSTALLING.discard(bid)
-
-def package_install(r,uid):
-    if not DOCKER_READY:
-        raise ValueError('Rootless Docker is unavailable.')
-    if r['id'] in RUNTIME or r['id'] in INSTALLING:
-        raise ValueError('Stop this bot and wait for any existing install to finish first.')
-    def worker():
-        try:
-            prepare_dependencies(r,force=True)
-            notify(uid,'✅ Dependency preparation completed. Start your bot from the dashboard.')
-        except Exception as exc:
-            LOG.exception('Dependency preparation failed')
-            notify(uid,'Dependency preparation failed: '+safe_html(str(exc)[-1000:]))
-    threading.Thread(target=worker,daemon=True).start()
-
-
-# Owner management: validated JSON forms allow every plan property to be edited
-# without code changes, with explicit field names shown in the bot.
-def manager(call):
-    items = [('💳 UPI ID Settings','s:upi'),('💎 Manage plans','s:manageplans'),
-             ('📋 Pending orders','s:orders:pending'),('✅ Approved orders','s:orders:approved'),
-             ('❌ Rejected orders','s:orders:rejected'),('📈 Revenue statistics','s:revenue'),
-             ('🎁 Give / Remove Sub','s:gift'),('📢 Targeted broadcast','s:broadcast'),
-             ('🚫 Ban / unban','s:ban'),('📋 Ban list','s:banlist'),
-             ('💾 Database backup','s:backup'),('⚙️ Service settings','s:settings')]
-    screen(call,'💎 <b>Subscription Manager</b>\nAmounts are stored as integer paise; all dates use UTC.',keyboard(*items,back='owner_home'))
-
-def plan_form(call,pid=0):
-    data = {'name':'WEEKLY','price':'59.00','duration_days':7,'bot_limit':5,'description':'Priority support',
-            'emoji':'💎','active':1,'max_upload_mb':20}
-    if pid:
-        found = rows('SELECT * FROM plans WHERE id=?',(pid,))
-        if not found:
-            raise ValueError('Plan not found.')
-        data = found[0]
-        data.pop('id')
-        data['price'] = money(data['price'])
-    set_state(call.from_user.id,'plan_edit',pid=pid)
-    screen(call,'Send a JSON object to save the plan. Price is rupees; use 7 for weekly, 30 for monthly, or custom days.\n<pre>'+
-           safe_html(json.dumps(data,ensure_ascii=False,indent=2))+'</pre>',keyboard(back='s:manageplans'))
-
-def validate_plan(data):
-    required = {'name','price','duration_days','bot_limit','description','emoji','active','max_upload_mb'}
-    if set(data)!=required:
-        raise ValueError('Use exactly the fields in the displayed template.')
-    try:
-        amount = Decimal(str(data['price']))
-        if not amount.is_finite() or amount<=0 or amount>1000000 or amount*100 != (amount*100).to_integral_value():
-            raise ValueError('Price must be positive with no more than 2 decimal places.')
-        data['price'] = int(amount*100)
-    except InvalidOperation:
-        raise ValueError('Invalid price.') from None
-    for key,low,high in [('duration_days',1,3650),('bot_limit',1,1000),('max_upload_mb',1,20),('active',0,1)]:
-        if isinstance(data[key],bool) or int(data[key])!=float(data[key]) or not low<=int(data[key])<=high:
-            raise ValueError('Invalid '+key)
-        data[key] = int(data[key])
-    for key,limit in [('name',60),('description',250),('emoji',12)]:
-        data[key] = str(data[key]).strip()
-        if not data[key] or len(data[key])>limit:
-            raise ValueError(f'{key} must contain 1 to {limit} characters.')
-    return data
-
-def revenue_text():
-    now = datetime.now(timezone.utc)
-    day = now.replace(hour=0,minute=0,second=0,microsecond=0).timestamp()
-    # UTC conversion independent of the host's local timezone.
-    import calendar
-    day = calendar.timegm(now.replace(hour=0,minute=0,second=0,microsecond=0).timetuple())
-    week = day-now.weekday()*86400
-    month = calendar.timegm(now.replace(day=1,hour=0,minute=0,second=0,microsecond=0).timetuple())
-    text = '📈 <b>Approved payment revenue (UTC)</b>\n'
-    for label,start in [('Today',day),('This week',week),('This month',month),('Total',0)]:
-        amount = rows("SELECT COALESCE(SUM(amount),0) AS n FROM orders WHERE status='approved' AND processed_at>=?",(start,))[0]['n']
-        text += f'{label}: ₹{money(amount)}\n'
-    count = rows('SELECT COUNT(*) n FROM users WHERE plan IS NOT NULL AND plan_expiry>? AND banned=0',(time.time(),))[0]['n']
-    text += f'Active subscribers: {count}\nServer CPU: {psutil.cpu_percent()}%\nRAM: {psutil.virtual_memory().percent}%\nDisk: {psutil.disk_usage(STORAGE_DIR).percent}%'
-    return text
-
-def plan_row(pid):
-    found = rows('SELECT * FROM plans WHERE id=?',(pid,))
-    if not found:
-        raise ValueError('Plan not found.')
-    return found[0]
-
-def parse_price_paise(text):
-    try:
-        amount = Decimal(text.replace('₹','').replace(',','').strip())
-    except InvalidOperation:
-        raise ValueError('Send the price as a number, for example 49.') from None
-    if not amount.is_finite() or amount<=0 or amount>1000000 or amount*100 != (amount*100).to_integral_value():
-        raise ValueError('Price must be positive with at most 2 decimal places.')
-    return int(amount*100)
-
-def parse_days(text):
-    text = text.strip()
-    if not text.isdigit() or not 1<=int(text)<=3650:
-        raise ValueError('Send a whole number of days between 1 and 3650.')
-    return int(text)
-
-def give_confirm(uid,target,days):
-    u = premium_user(target)
-    now = time.time()
-    current = f'{u["plan"]} until {stamp(u["plan_expiry"])}' if u['plan'] and u['plan_expiry']>now else 'No active subscription'
-    set_state(uid,'give_confirm',target=target,days=days)
-    say(uid,f'🎁 <b>Confirm</b>\nUser: <code>{target}</code>\nCurrent: {safe_html(current)}\nAdd: {days} days',
-        keyboard(('✅ Confirm','s:gconfirm'),('❌ Cancel','s:gift'),back=None))
-
-def handle_admin_input(message,state):
-    uid = message.from_user.id
-    mode = state['mode']
-    text = (message.text or '').strip()
-    if mode=='reject':
-        process_order(state['oid'],uid,False,'Not verified' if text=='/skip' else text[:500])
-    elif mode=='ticket_reply':
-        ticket = rows('SELECT * FROM tickets WHERE id=?',(state['ticket'],))
-        if not ticket:
-            raise ValueError('Ticket missing.')
-        execute('UPDATE tickets SET reply=?,replied_by=? WHERE id=?',(text[:3500],uid,state['ticket']))
-        notify(ticket[0]['user_id'],'🆘 <b>Support reply</b>\n'+safe_html(text[:3500]))
-    else:
-        if uid!=OWNER_ID:
-            raise ValueError('Owner access required.')
-        if mode=='plan_edit':
-            data = validate_plan(json.loads(text))
-            columns = list(data)
-            if state['pid']:
-                execute('UPDATE plans SET '+','.join(k+'=?' for k in columns)+' WHERE id=?',tuple(data.values())+(state['pid'],))
-            else:
-                if rows('SELECT COUNT(*) n FROM plans WHERE active=1')[0]['n']>=10:
-                    raise ValueError('Keep at most 10 active plans for readable Telegram screens.')
-                execute('INSERT INTO plans('+','.join(columns)+') VALUES ('+','.join('?' for _ in columns)+')',tuple(data.values()))
-        elif mode=='upi':
-            value = text.strip()
-            if not UPI_RE.fullmatch(value):
-                raise ValueError('Invalid UPI ID. Use the format name@bank, for example yourname@upi. Send /cancel to stop.')
-            execute('INSERT INTO settings VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value',('upi_id',value))
-            clear_state(uid)
-            say(uid,'✅ <b>UPI ID Updated Successfully!</b>\n\nYour new UPI ID:\n<code>'+safe_html(value)+'</code>',keyboard(back='s:upi'))
-            return
-        elif mode=='np_name':
-            name = text.strip()
-            if not 1<=len(name)<=60:
-                raise ValueError('Plan name must be 1 to 60 characters.')
-            set_state(uid,'np_price',name=name)
-            say(uid,'💰 <b>Enter Plan Price in INR</b>\nExample: <code>49</code>',keyboard(('❌ Cancel','s:manageplans'),back=None))
-            return
-        elif mode in ('np_price','ep_price'):
-            price = parse_price_paise(text)
-            if mode=='ep_price':
-                plan_row(state['pid'])
-                execute('UPDATE plans SET price=? WHERE id=?',(price,state['pid']))
-                clear_state(uid)
-                say(uid,f'✅ Price updated to ₹{money(price)}.',keyboard(back=f's:editplan:{state["pid"]}'))
-                return
-            set_state(uid,'np_days',name=state['name'],price=price)
-            say(uid,'⏳ <b>Enter Plan Duration in Days</b>\nExample: <code>7</code>',keyboard(('❌ Cancel','s:manageplans'),back=None))
-            return
-        elif mode in ('np_days','ep_days'):
-            days = parse_days(text)
-            if mode=='ep_days':
-                plan_row(state['pid'])
-                execute('UPDATE plans SET duration_days=? WHERE id=?',(days,state['pid']))
-                clear_state(uid)
-                say(uid,f'✅ Duration updated to {days} days.',keyboard(back=f's:editplan:{state["pid"]}'))
-                return
-            set_state(uid,'plan_confirm',plan={'name':state['name'],'price':state['price'],'days':days})
-            say(uid,f'💎 <b>Plan Preview</b>\n\nPlan: {safe_html(state["name"])}\nPrice: ₹{money(state["price"])}\nDuration: {days} Days\n\nSave this plan?',
-                keyboard(('✅ Save Plan','s:plan_save'),('✏️ Edit','s:plan_edit_again'),('❌ Cancel','s:manageplans'),back=None))
-            return
-        elif mode=='give_uid':
-            target = int(text)
-            if target<=0:
-                raise ValueError('Send a valid numeric Telegram User ID.')
-            ensure_user(target)
-            set_state(uid,'give_pick',target=target)
-            say(uid,f'🎁 <b>Choose duration</b> for <code>{target}</code>',
-                keyboard(('7 Days','s:gd:7'),('30 Days','s:gd:30'),('90 Days','s:gd:90'),('Custom Days','s:gd:c'),('❌ Cancel','s:gift'),back=None))
-            return
-        elif mode=='give_days':
-            give_confirm(uid,state['target'],parse_days(text))
-            return
-        elif mode=='rem_uid':
-            target = int(text)
-            if target<=0:
-                raise ValueError('Send a valid numeric Telegram User ID.')
-            u = premium_user(target)
-            now = time.time()
-            status = f'{u["plan"]} until {stamp(u["plan_expiry"])}' if u['plan'] and u['plan_expiry']>now else 'No active subscription'
-            set_state(uid,'rem_confirm',target=target)
-            say(uid,f'➖ <b>Remove subscription?</b>\nUser: <code>{target}</code>\nStatus: {safe_html(status)}',
-                keyboard(('🗑 Confirm Remove','s:gremove'),('❌ Cancel','s:gift'),back=None))
-            return
-        elif mode=='settings':
-            values = json.loads(text)
-            allowed = {'upi_id','payee_name','subscription_on','free_limit','free_upload_mb','info_text','support','maintenance','maintenance_text','force_join'}
-            if not values or not set(values)<=allowed:
-                raise ValueError('Unknown or empty settings fields.')
-            for key,value in values.items():
-                value = str(value)
-                if key in ('subscription_on','maintenance') and value not in ('0','1'):
-                    raise ValueError('Use 0 or 1 for '+key)
-                if key in ('free_limit','free_upload_mb'):
-                    if not value.isdigit() or not 1<=int(value)<=(20 if key=='free_upload_mb' else 1000):
-                        raise ValueError('Invalid '+key)
-                if key=='upi_id' and value and not re.fullmatch(r'[A-Za-z0-9._-]+@[A-Za-z0-9.-]+',value):
-                    raise ValueError('Invalid UPI ID.')
-                if len(value)>(700 if key=='info_text' else 250):
-                    raise ValueError('Setting text is too long.')
-            with database(True) as con:
-                for key,value in values.items():
-                    con.execute('INSERT INTO settings VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value',(key,str(value)))
-            if 'free_limit' in values:
-                for target in list(users):
-                    enforce_limit(target)
-        elif mode=='gift':
-            target_s,pid_s = text.split()
-            target,pid = int(target_s),int(pid_s)
-            ensure_user(target)
-            if pid==0:
-                execute('UPDATE users SET plan=NULL,plan_expiry=0,reminded=0 WHERE id=?',(target,))
-            else:
-                result = rows('SELECT * FROM plans WHERE id=?',(pid,))
-                if not result:
-                    raise ValueError('Plan not found.')
-                p = result[0]
-                u = premium_user(target)
-                execute('UPDATE users SET plan=?,plan_expiry=?,bot_limit=?,max_upload_mb=?,reminded=0 WHERE id=?',
-                        (p['name'],max(time.time(),u['plan_expiry'])+p['duration_days']*86400,p['bot_limit'],p['max_upload_mb'],target))
-            enforce_limit(target)
-            notify(target,'Your subscription was updated by the owner. Check My Subscription.')
-        elif mode=='ban':
-            action,target_s = text.split()
-            target = int(target_s)
-            if target in ADMIN_IDS or action not in ('ban','unban'):
-                raise ValueError('Invalid target or action. Admin accounts cannot be banned here.')
-            ensure_user(target)
-            execute('UPDATE users SET banned=? WHERE id=?',(int(action=='ban'),target))
-            users[target]['rejected'] = action=='ban'
-            users[target]['approved'] = action=='unban'
-            save_data()
-            enforce_limit(target)
-        elif mode=='broadcast':
-            audience,body = text.split('\n',1)
-            if audience not in ('all','subscribers','expired') or len(body)>3500:
-                raise ValueError('First line must be all, subscribers or expired. Message limit: 3500 characters.')
-            set_state(uid,'broadcast_confirm',audience=audience,body=body)
-            say(uid,'Confirm broadcast to '+safe_html(audience)+'?\n'+safe_html(body),keyboard(('✅ SEND','s:bcsend'),back='s:manager'))
-            return
-    clear_state(uid)
-    say(uid,'✅ Saved.',keyboard(back='s:manager'))
-
-def targeted_broadcast(uid,audience,body):
-    query = 'SELECT id FROM users WHERE banned=0'
-    args = ()
-    if audience=='subscribers':
-        query += ' AND plan IS NOT NULL AND plan_expiry>?'
-        args = (time.time(),)
-    elif audience=='expired':
-        query += ' AND plan_expiry>0 AND plan_expiry<=?'
-        args = (time.time(),)
-    sent,failed = 0,0
-    for r in rows(query,args):
-        try:
-            say(r['id'],'📢 '+safe_html(body))
-            sent += 1
-        except Exception:
-            failed += 1
-            LOG.exception('Broadcast recipient unavailable')
-        if STOP_EVENT.wait(.1):
-            break
-    notify(uid,f'Broadcast finished. Sent: {sent}. Failed: {failed}.')
-
-def subscription_callback(call):
-    uid = call.from_user.id
-    bits = call.data.split(':')
-    action = bits[1]
-    arg = bits[2] if len(bits)>2 else ''
-    if action in ('manager','settings','manageplans','editplan','addplan','toggleplan','deleteplan','confirmdeleteplan',
-                  'gift','ban','banlist','broadcast','bcsend','revenue','backup','upi','upi_set','upi_remove','upi_clear',
-                  'planjson','plan_price','plan_days','plan_save','plan_edit_again','plan_defaults',
-                  'gift_give','gift_remove','gd','gconfirm','gremove') and uid!=OWNER_ID:
-        raise ValueError('Owner access required.')
-    if action in ('approve','reject','review','orders','replyticket') and uid not in ADMIN_IDS:
-        raise ValueError('Admin access required.')
-    if action in ('home','info','plans','manager','dashboard','manageplans','bot'):
-        clear_state(uid)
-    if action=='home':
-        say(uid,'🏠 Main menu',control_buttons(uid))
-    elif action=='info':
-        if setting('subscription_on')!='1':
-            raise ValueError('Subscriptions are temporarily disabled.')
-        show_subscription(uid,call)
-    elif action=='plans':
-        if setting('subscription_on')!='1':
-            raise ValueError('Subscriptions are temporarily disabled.')
-        select_plan(call)
-    elif action=='mine':
-        o = pending_order(uid)
-        buttons = [('🔄 RENEW / UPGRADE','s:info')]
-        if o:
-            if o['stage']!='review':
-                buttons.append(('📤 Resume payment',f's:paid:{o["id"]}'))
-            buttons.append(('❌ Cancel pending order',f's:cancel:{o["id"]}'))
-        screen(call,my_subscription(uid),keyboard(*buttons))
-    elif action=='plan':
-        p = rows('SELECT * FROM plans WHERE id=? AND active=1',(int(arg),))
-        if not p:
-            raise ValueError('Plan unavailable.')
-        p = p[0]
-        screen(call,f'💎 <b>Confirm your plan</b>\n{safe_html(p["name"])}\n₹{money(p["price"])} / {p["duration_days"]} days\n'
-               f'{p["bot_limit"]} simultaneous bots\n{safe_html(p["description"])}\n\nAre you sure you want to buy this plan?',
-               keyboard(('✅ YES, CONTINUE',f's:pay:{arg}'),('❌ CANCEL','s:home'),back='s:plans'))
-    elif action=='pay':
-        qr_payment(call,int(arg))
-    elif action=='paid':
-        o = get_order(arg,uid)
-        if o['status']!='pending' or o['stage']=='review':
-            raise ValueError('Order expired, closed, or already awaiting review.')
-        if o['stage']=='qr':
-            execute("UPDATE orders SET stage='utr' WHERE id=? AND status='pending' AND stage='qr'",(arg,))
-        o = get_order(arg,uid)
-        say(uid,'Send the payment screenshot as a photo or image document.' if o['stage']=='screenshot' else 'Send the 12 to 22 character UTR / Transaction ID.',
-            keyboard(('❌ CANCEL',f's:cancel:{arg}'),back='s:mine'))
-    elif action=='cancel':
-        with database(True) as con:
-            cur = con.execute("UPDATE orders SET status='cancelled' WHERE id=? AND user_id=? AND status='pending'",(arg,uid))
-            if not cur.rowcount:
-                raise ValueError('Order is already closed.')
-        clear_state(uid)
-        screen(call,'Order cancelled. Any real transfer is not reversed; contact support if you already paid.',keyboard(back='s:info'))
-    elif action=='approve':
-        process_order(arg,uid,True,'Bank credit manually verified')
-    elif action=='reject':
-        o = get_order(arg)
-        if o['status']!='pending' or o['stage']!='review':
-            raise ValueError('Order is no longer awaiting review.')
-        set_state(uid,'reject',oid=arg)
-        say(uid,'Send a rejection reason, or /skip for Not verified.',keyboard(back='s:home'))
-    elif action=='orders':
-        if arg not in ('pending','approved','rejected','expired','cancelled'):
-            raise ValueError('Invalid order filter.')
-        orders = rows('SELECT * FROM orders WHERE status=? ORDER BY created_at DESC LIMIT 30',(arg,))
-        text = '<b>'+arg.upper()+' ORDERS</b>\n'+'\n'.join(f'{o["id"]} / {o["user_id"]} / ₹{money(o["amount"])} / {o["stage"]}' for o in orders)
-        buttons = [('Review '+o['id'],f's:review:{o["id"]}') for o in orders if o['stage']=='review' and o['status']=='pending']
-        screen(call,text,keyboard(*buttons,back='s:manager' if uid==OWNER_ID else 's:home'))
-    elif action=='review':
-        send_review(arg)
-    elif action=='manager':
-        manager(call)
-    elif action=='settings':
-        values = {r['key']:r['value'] for r in rows("SELECT * FROM settings WHERE key NOT IN ('legacy_imported','default_plans_seeded')")}
-        set_state(uid,'settings')
-        screen(call,'⚙️ <b>Service Settings (advanced)</b>\nSend a JSON object with settings to change. Booleans use "0" / "1".\n<pre>'+safe_html(json.dumps(values,ensure_ascii=False,indent=2))+'</pre>',keyboard(back='s:manager'))
-    elif action=='upi':
-        clear_state(uid)
-        current = setting('upi_id')
-        shown = f'<code>{safe_html(current)}</code>' if current else '<i>Not set yet</i>'
-        screen(call,f'💳 <b>UPI ID Settings</b>\n━━━━━━━━━━━━━━━━\nCurrent UPI ID:\n{shown}',
-               keyboard(('✏️ Change UPI ID','s:upi_set'),('🗑 Remove UPI ID','s:upi_remove'),back='s:manager'))
-    elif action=='upi_set':
-        set_state(uid,'upi')
-        screen(call,'💳 <b>UPI ID Settings</b>\n\nPlease send your UPI ID.\n\nExample:\n<code>yourname@upi</code>\n\nSend /cancel to cancel.',
-               keyboard(('❌ Cancel','s:upi'),back=None))
-    elif action=='upi_remove':
-        screen(call,'🗑 <b>Remove UPI ID?</b>\nUsers will not be able to pay until a new UPI ID is set.',
-               keyboard(('🗑 Yes, Remove','s:upi_clear'),('❌ Cancel','s:upi'),back=None))
-    elif action=='upi_clear':
-        execute('INSERT INTO settings VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value',('upi_id',''))
-        screen(call,'✅ UPI ID removed.',keyboard(back='s:upi'))
-    elif action=='manageplans':
-        clear_state(uid)
-        plans = rows('SELECT * FROM plans ORDER BY price,id LIMIT 40')
-        lines = [f'{"🟢" if p["active"] else "🔴"} <b>{safe_html(p["name"])}</b> - ₹{money(p["price"])} / {p["duration_days"]} days' for p in plans]
-        text = '💎 <b>Manage Plans</b>\n━━━━━━━━━━━━━━━━\n'+('\n'.join(lines) if lines else 'No plans yet.')
-        items = [('➕ Add Plan','s:addplan'),('♻️ Restore Defaults','s:plan_defaults')]
-        items += [(f'✏️ {p["name"][:22]}',f's:editplan:{p["id"]}') for p in plans]
-        screen(call,text,keyboard(*items,back='s:manager'))
-    elif action=='plan_defaults':
-        added = 0
-        for name,price,days,limit,desc,emoji in DEFAULT_PLANS:
-            if not rows('SELECT 1 FROM plans WHERE name=? AND price=? AND duration_days=?',(name,price,days)):
-                execute('INSERT INTO plans(name,price,duration_days,bot_limit,description,emoji,active,max_upload_mb) VALUES (?,?,?,?,?,?,1,20)',
-                        (name,price,days,limit,desc,emoji))
-                added += 1
-        screen(call,f'✅ Default plans restored. Added: {added}.',keyboard(back='s:manageplans'))
-    elif action=='addplan':
-        set_state(uid,'np_name')
-        screen(call,'💎 <b>Enter Plan Name</b>\n\nExample: <code>Premium Weekly</code>\n\nSend /cancel to cancel.',
-               keyboard(('❌ Cancel','s:manageplans'),back=None))
-    elif action=='plan_edit_again':
-        set_state(uid,'np_name')
-        screen(call,'✏️ <b>Enter Plan Name</b>\n\nSend /cancel to cancel.',keyboard(('❌ Cancel','s:manageplans'),back=None))
-    elif action=='plan_save':
-        state = UI_STATE.get(uid,{})
-        if state.get('mode')!='plan_confirm':
-            raise ValueError('No plan is waiting to be saved.')
-        if rows('SELECT COUNT(*) n FROM plans WHERE active=1')[0]['n']>=10:
-            raise ValueError('Keep at most 10 active plans for readable Telegram screens.')
-        p = state['plan']
-        execute('INSERT INTO plans(name,price,duration_days,bot_limit,description,emoji,active,max_upload_mb) VALUES (?,?,?,5,?,?,1,20)',
-                (p['name'],p['price'],p['days'],f'{p["days"]} days of premium hosting','💎'))
-        clear_state(uid)
-        screen(call,'✅ <b>Plan saved!</b>',keyboard(back='s:manageplans'))
-    elif action=='editplan':
-        clear_state(uid)
-        p = plan_row(int(arg))
-        screen(call,f'✏️ <b>{safe_html(p["name"])}</b>\nPrice: ₹{money(p["price"])}\nDuration: {p["duration_days"]} days\nStatus: {"Enabled" if p["active"] else "Disabled"}',
-               keyboard(('💰 Change Price',f's:plan_price:{arg}'),('⏳ Change Duration',f's:plan_days:{arg}'),
-                        ('🔄 Enable / Disable',f's:toggleplan:{arg}'),('🗑 Delete',f's:deleteplan:{arg}'),
-                        ('⚙️ Advanced',f's:planjson:{arg}'),back='s:manageplans'))
-    elif action=='planjson':
-        plan_form(call,int(arg))
-    elif action in ('plan_price','plan_days'):
-        plan_row(int(arg))
-        set_state(uid,'ep_'+action[5:],pid=int(arg))
-        prompt = '💰 <b>Enter the new price in INR</b>\nExample: <code>49</code>' if action=='plan_price' else '⏳ <b>Enter the new duration in days</b>\nExample: <code>7</code>'
-        screen(call,prompt+'\n\nSend /cancel to cancel.',keyboard(('❌ Cancel',f's:editplan:{arg}'),back=None))
-    elif action=='toggleplan':
-        execute('UPDATE plans SET active=1-active WHERE id=?',(int(arg),))
-        screen(call,'✅ Plan availability changed.',keyboard(back='s:manageplans'))
-    elif action=='deleteplan':
-        screen(call,'🗑 <b>Delete this plan?</b>\nExisting orders keep their purchase details; current subscribers keep their time.',keyboard(('🗑 Confirm Delete',f's:confirmdeleteplan:{arg}'),('❌ Cancel',f's:editplan:{arg}'),back=None))
-    elif action=='confirmdeleteplan':
-        execute('DELETE FROM plans WHERE id=?',(int(arg),))
-        screen(call,'✅ Plan deleted.',keyboard(back='s:manageplans'))
-    elif action=='gift':
-        clear_state(uid)
-        screen(call,'🎁 <b>Give / Remove Subscription</b>',
-               keyboard(('🎁 Give Subscription','s:gift_give'),('➖ Remove Subscription','s:gift_remove'),back='s:manager'))
-    elif action in ('gift_give','gift_remove'):
-        set_state(uid,'give_uid' if action=='gift_give' else 'rem_uid')
-        screen(call,'👤 <b>Send the Telegram User ID.</b>\n\nSend /cancel to cancel.',keyboard(('❌ Cancel','s:gift'),back=None))
-    elif action=='gd':
-        state = UI_STATE.get(uid,{})
-        if state.get('mode')!='give_pick':
-            raise ValueError('Start again from Give Subscription.')
-        if arg=='c':
-            set_state(uid,'give_days',target=state['target'])
-            screen(call,'⏳ <b>Enter the number of days.</b>\nExample: <code>15</code>',keyboard(('❌ Cancel','s:gift'),back=None))
-        else:
-            if arg not in ('7','30','90'):
-                raise ValueError('Invalid duration.')
-            give_confirm(uid,state['target'],int(arg))
-    elif action=='gconfirm':
-        state = UI_STATE.get(uid,{})
-        if state.get('mode')!='give_confirm':
-            raise ValueError('Nothing to confirm.')
-        target,days = state['target'],state['days']
-        clear_state(uid)
-        u = premium_user(target)
-        now = time.time()
-        active = bool(u['plan']) and u['plan_expiry']>now
-        caps = rows('SELECT COALESCE(MAX(bot_limit),5) b, COALESCE(MAX(max_upload_mb),20) m FROM plans')[0]
-        expiry = max(now,u['plan_expiry'])+days*86400
-        execute('UPDATE users SET plan=?,plan_expiry=?,bot_limit=MAX(bot_limit,?),max_upload_mb=MAX(max_upload_mb,?),reminded=0 WHERE id=?',
-                (u['plan'] if active else 'Gifted',expiry,caps['b'],caps['m'],target))
-        enforce_limit(target)
-        notify(target,f'🎁 <b>You received a subscription!</b>\nAdded: {days} days\nExpires: {stamp(expiry)}')
-        screen(call,f'✅ <b>Subscription given</b>\nUser: <code>{target}</code>\nDays: {days}\nExpires: {stamp(expiry)}',keyboard(back='s:gift'))
-    elif action=='gremove':
-        state = UI_STATE.get(uid,{})
-        if state.get('mode')!='rem_confirm':
-            raise ValueError('Nothing to confirm.')
-        target = state['target']
-        clear_state(uid)
-        execute('UPDATE users SET plan=NULL,plan_expiry=0,reminded=0 WHERE id=?',(target,))
-        enforce_limit(target)
-        notify(target,'ℹ️ Your subscription was removed by the owner. Free limits now apply; your files were kept.')
-        screen(call,f'✅ Subscription removed for <code>{target}</code>.',keyboard(back='s:gift'))
-    elif action=='ban':
-        set_state(uid,'ban')
-        screen(call,'Send ban USER_ID or unban USER_ID.',keyboard(back='s:manager'))
-    elif action=='banlist':
-        result = rows('SELECT id FROM users WHERE banned=1 LIMIT 100')
-        screen(call,'<b>Banned accounts</b>\n'+'\n'.join(str(r['id']) for r in result),keyboard(back='s:manager'))
-    elif action=='broadcast':
-        set_state(uid,'broadcast')
-        screen(call,'First line: all, subscribers, or expired.\nFollowing lines: your message. A confirmation follows.',keyboard(back='s:manager'))
-    elif action=='bcsend':
-        state = UI_STATE.get(uid,{})
-        if state.get('mode')!='broadcast_confirm':
-            raise ValueError('No broadcast to send.')
-        clear_state(uid)
-        threading.Thread(target=targeted_broadcast,args=(uid,state['audience'],state['body']),daemon=True).start()
-    elif action=='revenue':
-        screen(call,revenue_text(),keyboard(back='s:manager'))
-    elif action=='backup':
-        backup_database(send=True)
-    elif action=='replyticket':
-        set_state(uid,'ticket_reply',ticket=int(arg))
-        say(uid,'Send your support reply.',keyboard(back='s:home'))
-    elif action=='support':
-        set_state(uid,'ticket')
-        screen(call,'Send your support message (up to 3500 characters). Do not send passwords or tokens.',keyboard())
-    elif action=='dashboard':
-        dashboard(call)
-    elif action in ('bot','run','stop','restart','logs','downloadlogs','env','install','delete','confirmdelete','update','deleteproject','confirmdeleteproject'):
-        r = owned_bot(uid,arg)
-        if action=='bot':
-            bot_screen(call,r)
-        elif action=='run':
-            start_script(uid,r['path'])
-            screen(call,'Starting container. Check the dashboard and logs for startup errors.',keyboard(back=f's:bot:{arg}'))
-        elif action=='stop':
-            stop_script(uid,r['path'])
-            screen(call,'Stop requested.',keyboard(back=f's:bot:{arg}'))
-        elif action=='restart':
-            stop_script(uid,r['path'])
-            def restart():
-                try:
-                    for _ in range(30):
-                        if arg not in RUNTIME:
-                            start_script(uid,r['path'])
-                            return
-                        if STOP_EVENT.wait(1):
-                            return
-                    notify(uid,'Restart could not finish; inspect the dashboard.')
-                except Exception as exc:
-                    LOG.exception('Restart failed')
-                    notify(uid,'Restart failed: '+safe_html(str(exc)))
-            threading.Thread(target=restart,daemon=True).start()
-        elif action in ('logs','downloadlogs'):
-            with STATE_LOCK:
-                text = '\n'.join(logs_store.get(uid,{}).get(r['path'],[])) or 'No logs since this server started.'
-            if action=='downloadlogs':
-                stream = BytesIO(text.encode())
-                stream.name = 'bot-logs.txt'
-                telegram(bot.send_document,uid,stream)
-            else:
-                screen(call,'📜 <b>Live log tail</b>\n<pre>'+safe_html(text[-2200:])+'</pre>',keyboard(('🔄 Refresh',f's:logs:{arg}'),('📥 Download',f's:downloadlogs:{arg}'),back=f's:bot:{arg}'))
-        elif action=='env':
-            set_state(uid,'bot_env',bid=arg)
-            current = get_file_env(uid,r['name'])
-            screen(call,'Send KEY=VALUE lines to merge into this bot environment. Send /clear to erase stored values.\nCurrent keys: '+safe_html(', '.join(current) or 'none'),keyboard(back=f's:bot:{arg}'))
-        elif action=='install':
-            package_install(r,uid)
-        elif action=='update':
-            set_state(uid,'bot_update',bid=arg)
-            screen(call,'Send the replacement file as a document, with the same file extension. The bot will be stopped; restart manually after updating.',keyboard(back=f's:bot:{arg}'))
-        elif action=='deleteproject':
-            screen(call,'Delete the entire project, including dependencies, environment settings and all its entry points? This cannot be undone.',keyboard(('🗑 CONFIRM PROJECT DELETE',f's:confirmdeleteproject:{arg}'),back=f's:bot:{arg}'))
-        elif action=='confirmdeleteproject':
-            project = Path(r['project'])
-            root = Path(user_folder(uid)).resolve()
-            if project.parent!=root or not project.name.startswith('p_'):
-                raise ValueError('Whole-project deletion is unavailable for legacy shared folders. Delete individual files instead.')
-            related = rows('SELECT * FROM bots WHERE user_id=? AND project=?',(uid,str(project)))
-            for item in related:
-                stop_script(uid,item['path'])
-            if any(item['id'] in RUNTIME or item['id'] in INSTALLING for item in related):
-                raise ValueError('Project is stopping or installing. Try delete again after it finishes.')
-            shutil.rmtree(project)
-            names = {item['name'] for item in related}
-            users[uid]['files'] = [name for name in users[uid]['files'] if name not in names]
-            for name in names:
-                users[uid].get('env_vars',{}).pop(name,None)
-            execute('DELETE FROM bots WHERE user_id=? AND project=?',(uid,str(project)))
-            save_data()
-            dashboard(call)
-        elif action=='delete':
-            screen(call,'Delete this entry point? This stops the bot and deletes its file, not other project files.',keyboard(('🗑 CONFIRM DELETE',f's:confirmdelete:{arg}'),back=f's:bot:{arg}'))
-        elif action=='confirmdelete':
-            stop_script(uid,r['path'])
-            if arg in RUNTIME:
-                raise ValueError('Bot is stopping. Try delete again once it is stopped.')
-            project_path(uid,r['name']).unlink(missing_ok=True)
-            execute('DELETE FROM bots WHERE id=? AND user_id=?',(arg,uid))
-            if r['name'] in users[uid]['files']:
-                users[uid]['files'].remove(r['name'])
-            users[uid].get('env_vars',{}).pop(r['name'],None)
-            save_data()
-            dashboard(call)
-    else:
-        raise ValueError('Unknown action. Open the main menu again.')
-
-_old_start = start_command
-_old_text = control_handler
-_old_callback = callback_query
-
-def check_access(obj,callback=False):
-    uid = obj.from_user.id
-    message = obj.message if callback else obj
-    if not message or message.chat.type!='private':
-        raise ValueError('Use this bot in a private chat.')
-    ensure_user(uid)
-    with STATE_LOCK:
-        users[uid]['username'] = '@'+obj.from_user.username if obj.from_user.username else 'Not supplied'
-        users[uid]['name'] = obj.from_user.first_name or 'User'
-    u = premium_user(uid)
-    if uid not in ADMIN_IDS and (u['banned'] or users[uid].get('rejected')):
-        raise ValueError('Your account is banned. Contact support.')
-    now = time.time()
-    with UI_LOCK:
-        queue = RATE[uid]
-        while queue and queue[0]<now-60:
-            queue.popleft()
-        if len(queue)>=RATE_LIMIT and uid not in ADMIN_IDS:
-            raise ValueError('Too many requests. Please try again shortly.')
-        queue.append(now)
-    execute('UPDATE users SET last_seen=? WHERE id=?',(now,uid))
-    channel = setting('force_join')
-    if channel and uid not in ADMIN_IDS:
-        membership = telegram(bot.get_chat_member,channel,uid)
-        if membership.status not in ('creator','administrator','member') and not getattr(membership,'is_member',False):
-            raise ValueError('Join '+channel+' before using this service, then try again.')
-
-def guarded(fn,callback=False):
-    @functools.wraps(fn)
-    def wrapper(obj):
-        try:
-            if callback:
-                try:
-                    telegram(bot.answer_callback_query,obj.id)
-                except Exception:
-                    LOG.exception('Callback acknowledgement failed')
-            check_access(obj,callback)
-            return fn(obj)
-        except (ValueError,KeyError,TypeError,json.JSONDecodeError,sqlite3.IntegrityError) as exc:
-            msg = str(exc)[:1500] or 'Invalid input. Please try again.'
-            notify(obj.from_user.id,'⚠️ '+safe_html(msg))
-        except Exception:
-            LOG.exception('Handler failed')
-            notify(obj.from_user.id,'⚠️ That action could not be completed. Please try again or contact support.')
-    return wrapper
-
-@guarded
-def premium_start(message):
-    clear_state(message.from_user.id)
-    return _old_start(message)
-
-def receive_proof(message,o):
-    uid = message.from_user.id
-    if o['stage']=='utr':
-        if not message.text:
-            raise ValueError('Send the UTR as text before the screenshot.')
-        receive_utr(uid,message.text,o['id'])
-        say(uid,'✅ UTR saved. Now send a payment screenshot as a photo or image document.',keyboard(('❌ CANCEL',f's:cancel:{o["id"]}'),back='s:mine'))
-        return
-    photo = getattr(message,'photo',None)
-    doc = getattr(message,'document',None)
-    if photo:
-        file_id,kind = photo[-1].file_id,'photo'
-    elif doc and (doc.mime_type or '').lower() in ('image/jpeg','image/png','image/webp') and (doc.file_size or 0)<=10*1024**2:
-        # Decode the actual document, not just the untrusted MIME label.
-        from PIL import Image
-        info = telegram(bot.get_file,doc.file_id)
-        raw = telegram(bot.download_file,info.file_path)
-        if len(raw)>10*1024**2:
-            raise ValueError('Screenshot is too large.')
-        with Image.open(BytesIO(raw)) as image:
-            image.verify()
-        file_id,kind = doc.file_id,'document'
-    else:
-        raise ValueError('Send a screenshot as a photo or PNG/JPEG/WebP image document.')
-    with database(True) as con:
-        cur = con.execute("UPDATE orders SET screenshot_file_id=?,screenshot_kind=?,stage='review' WHERE id=? AND user_id=? AND status='pending' AND stage='screenshot' AND expires_at>?",
-                          (file_id,kind,o['id'],uid,time.time()))
-        if cur.rowcount!=1:
-            raise ValueError('This order has expired or proof was already received.')
-    say(uid,f'✅ Payment proof received. Please wait for approval. Target: 5 to 10 minutes.\nOrder: <code>{o["id"]}</code>')
-    send_review(o['id'])
-
-@guarded
-def premium_text(message):
-    uid = message.from_user.id
-    text = (message.text or '').strip()
-    if text=='/cancel':
-        o = pending_order(uid)
-        if o:
-            execute("UPDATE orders SET status='cancelled' WHERE id=? AND status='pending'",(o['id'],))
-        clear_state(uid)
-        say(uid,'Cancelled. Real payments are not reversed.',control_buttons(uid))
-        return
-    if text=='/emojitest' and uid==OWNER_ID:
-        emoji_self_test(uid)
-        return
-    if text in ('💎 Subscription','📊 My Subscription','🆘 Support'):
-        if text.startswith('💎') and setting('subscription_on')!='1':
-            raise ValueError('Subscriptions are temporarily disabled.')
-        clear_state(uid)
-        if text.startswith('💎'):
-            show_subscription(uid)
-        elif text.startswith('📊'):
-            say(uid,my_subscription(uid),keyboard(('🔄 RENEW / UPGRADE','s:info'),('📤 Pending payment','s:mine')))
-        else:
-            set_state(uid,'ticket')
-            say(uid,'Send your support message.',keyboard())
-        return
-    state = UI_STATE.get(uid)
-    if state and state['at']<time.time()-1800:
-        clear_state(uid)
-        state = None
-    if state:
-        mode = state['mode']
-        if mode=='ticket':
-            if not text or len(text)>3500:
-                raise ValueError('Use 1 to 3500 characters.')
-            tid = execute('INSERT INTO tickets(user_id,message,created_at) VALUES (?,?,?)',(uid,text,time.time()))
-            for admin in ADMIN_IDS:
-                notify(admin,f'🆘 Ticket {tid} from {uid}\n'+safe_html(text),keyboard(('↩️ Reply',f's:replyticket:{tid}'),back=None))
-            clear_state(uid)
-            say(uid,'Support ticket submitted.')
-        elif mode=='bot_env':
-            r = owned_bot(uid,state['bid'])
-            if text=='/clear':
-                users[uid].get('env_vars',{}).pop(r['name'],None)
-            else:
-                values = parse_env_text(text)
-                if not values or len(text)>12000:
-                    raise ValueError('Send valid KEY=VALUE lines (maximum 12000 characters).')
-                users[uid].setdefault('env_vars',{}).setdefault(r['name'],{}).update(values)
-            save_data()
-            clear_state(uid)
-            try:
-                bot.delete_message(message.chat.id,message.message_id)
-            except Exception:
-                LOG.exception('Could not delete environment input')
-            say(uid,'Environment saved. Restart the bot to apply changes.',keyboard(back=f's:bot:{r["id"]}'))
-        elif mode=='bot_update':
-            raise ValueError('Send the replacement as a document, not text.')
-        else:
-            handle_admin_input(message,state)
-        return
-    o = pending_order(uid)
-    if o and o['stage'] in ('utr','screenshot'):
-        receive_proof(message,o)
-        return
-    if text.startswith('📁'):
-        say(uid,'📁 Open your bot dashboard.',keyboard(('📁 Dashboard','s:dashboard')))
-    elif text.startswith('⏹'):
-        for r in rows('SELECT * FROM bots WHERE user_id=? AND desired=1',(uid,)):
-            stop_script(uid,r['path'])
-        say(uid,'Stop requested for your bots.')
-    elif text.startswith('🔄'):
-        say(uid,'Select a bot to restart from its dashboard.',keyboard(('📁 Dashboard','s:dashboard')))
-    elif text.startswith('⚙'):
-        say(uid,'Packages are installed per project inside isolated containers, not on the hosting server.',keyboard(('📁 Dashboard','s:dashboard')))
-    elif text=='/admin' and uid in ADMIN_IDS:
-        say(uid,'Admin payment review',keyboard(('📋 Pending payments','s:orders:pending')))
-    else:
-        return _old_text(message)
-
-@guarded
-def premium_document(message):
-    uid = message.from_user.id
-    o = pending_order(uid)
-    if o and o['stage'] in ('utr','screenshot'):
-        receive_proof(message,o)
-        return
-    state = UI_STATE.get(uid,{})
-    if state.get('mode')=='bot_update':
-        r = owned_bot(uid,state['bid'])
-        doc = message.document
-        if Path(doc.file_name or '').suffix.lower()!=Path(r['path']).suffix.lower():
-            raise ValueError('Use the same file extension as the existing entry point.')
-        if (doc.file_size or 0)>upload_limit(uid):
-            raise ValueError('File exceeds your upload limit.')
-        info = telegram(bot.get_file,doc.file_id)
-        data = telegram(bot.download_file,info.file_path)
-        if len(data)>upload_limit(uid):
-            raise ValueError('Actual file exceeds your upload limit.')
-        safety_scan(data,r['name'])
-        stop_script(uid,r['path'])
-        if r['id'] in RUNTIME:
-            raise ValueError('Bot is stopping; send the update again once stopped.')
-        target = project_path(uid,r['name'])
-        tmp = target.with_name(target.name+'.update')
-        tmp.write_bytes(data)
-        os.replace(tmp,target)
-        clear_state(uid)
-        say(uid,'✅ File updated. Start it from the dashboard.',keyboard(back=f's:bot:{r["id"]}'))
-        return
-    try:
-        handle_upload(message)
-    except ValueError as exc:
-        if 'safety scan' in str(exc):
-            notify(OWNER_ID,f'⚠️ Upload from {uid} blocked by basic scan: '+safe_html(str(exc)))
-        raise
-
-@guarded
-def premium_photo(message):
-    o = pending_order(message.from_user.id)
-    if not o or o['stage'] not in ('utr','screenshot'):
-        raise ValueError('No payment screenshot is expected. Start with Subscription.')
-    receive_proof(message,o)
-
-@guarded
-def premium_other(message):
-    o = pending_order(message.from_user.id)
-    if o and o['stage'] in ('utr','screenshot'):
-        raise ValueError('Send a text UTR first, then a screenshot photo or image document.')
-
-def premium_callback_body(call):
-    if call.data.startswith('s:'):
-        return subscription_callback(call)
-    uid = call.from_user.id
-    # Old file-related callback strings contain user-controlled paths. Check every
-    # path before allowing legacy environment controls, and route file controls to
-    # the new compact IDs (Telegram limits callback data to 64 bytes).
-    prefixes = ('file_','run_','skiprun_','stop_','logs_','del_','envmenu_','clearenv_','cancelenv_')
-    for prefix in prefixes:
-        if call.data.startswith(prefix):
-            name = call.data[len(prefix):]
-            r = bot_record(uid,name)
-            mapping = {'file_':'bot','run_':'run','skiprun_':'run','stop_':'stop','logs_':'logs','del_':'delete',
-                       'envmenu_':'env','clearenv_':'env','cancelenv_':'bot'}
-            call.data = 's:'+mapping[prefix]+':'+r['id']
-            return subscription_callback(call)
-    if call.data=='myfiles':
-        return dashboard(call)
-    if call.data.startswith(('pkg','req','zip_','setenv_')):
-        raise ValueError('Use Dashboard > Environment or Install packages. Legacy host-wide package actions are disabled.')
-    # Preserve the existing owner/admin user-management controls.
-    if uid!=OWNER_ID and call.data.startswith(('owner_','adm_','approve_','reject_')):
-        raise ValueError('Owner access required.')
-    result = _old_callback(call)
-    if call.data.startswith(('owner_ban_','owner_appr_','approve_','reject_')) and uid==OWNER_ID:
-        for target,value in list(users.items()):
-            execute('UPDATE users SET banned=? WHERE id=?',(int(value.get('rejected',False)),target))
-            if value.get('rejected'):
-                enforce_limit(target)
-    return result
-
-premium_callback = guarded(premium_callback_body,callback=True)
-# Replace rather than stack catch-all handlers: pyTelegramBotAPI stops at the
-# first matching handler. The original handlers are retained as delegates.
-bot.message_handlers.clear()
-bot.callback_query_handlers.clear()
-bot.register_message_handler(premium_start,commands=['start'])
-bot.register_message_handler(premium_text,content_types=['text'],func=lambda m:True)
-bot.register_message_handler(premium_document,content_types=['document'])
-bot.register_message_handler(premium_photo,content_types=['photo'])
-bot.register_message_handler(premium_other,content_types=['audio','video','voice','sticker','animation','location','contact'])
-bot.register_callback_query_handler(premium_callback,func=lambda c:True)
-
-def maintenance_tick():
-    now = time.time()
-    execute("UPDATE orders SET status='expired',reason='Proof deadline elapsed' WHERE status='pending' AND stage!='review' AND expires_at<=?",(now,))
-    for u in rows('SELECT * FROM users WHERE plan IS NOT NULL'):
-        if u['plan_expiry']<=now:
-            execute('UPDATE users SET plan=NULL,reminded=0 WHERE id=? AND plan_expiry<=?',(u['id'],now))
-            enforce_limit(u['id'])
-            notify(u['id'],'⌛ Your subscription expired. Free limits now apply; your files were kept.')
-        elif u['plan_expiry']-now<=86400 and not u['reminded']:
-            notify(u['id'],f'⏰ Your subscription expires at {stamp(u["plan_expiry"])}. Renew from Subscription.')
-            execute('UPDATE users SET reminded=1 WHERE id=?',(u['id'],))
-    with UI_LOCK:
-        for uid,state in list(UI_STATE.items()):
-            if state['at']<now-1800:
-                UI_STATE.pop(uid,None)
-        for uid,q in list(RATE.items()):
-            if not q or q[-1]<now-600:
-                RATE.pop(uid,None)
-    for uid in list(users):
-        # Runtime disk accounting complements per-write file-size limits; a real
-        # filesystem/project quota is still needed to prevent bursts between scans.
-        if dir_size(user_folder(uid))>MAX_PROJECT_MB*1024**2:
-            for r in rows('SELECT * FROM bots WHERE user_id=? AND desired=1',(uid,)):
-                stop_script(uid,r['path'])
-            notify(uid,'⚠️ Project storage quota exceeded. Bots stopped; remove unused files.')
-
-def background_loop():
-    last_backup = setting('last_backup_day','')
-    while not STOP_EVENT.is_set():
-        try:
-            maintenance_tick()
-            day = datetime.now(timezone.utc).strftime('%Y-%m-%d')
-            if day!=last_backup:
-                backup_database(send=True)
-                set_setting('last_backup_day',day)
-                last_backup = day
-        except Exception:
-            LOG.exception('Background maintenance failed')
-        STOP_EVENT.wait(60)
-
-def restore_all():
-    maintenance_tick()
-    for r in rows('SELECT * FROM bots WHERE desired=1 ORDER BY created_at,id'):
-        try:
-            if is_approved(r['user_id']) and not premium_user(r['user_id'])['banned']:
-                start_script(r['user_id'],r['path'])
-            else:
-                execute("UPDATE bots SET desired=0,status='stopped' WHERE id=?",(r['id'],))
-        except Exception:
-            LOG.exception('Restore failed for %s',r['id'])
-
-class PremiumExceptionHandler(telebot.ExceptionHandler):
-    def handle(self,exception):
-        LOG.error('Telegram worker error',exc_info=(type(exception),exception,exception.__traceback__))
-        return True
-
-bot.exception_handler = PremiumExceptionHandler()
-
-def shutdown(signum=None,frame=None):
-    if STOP_EVENT.is_set():
-        return
-    STOP_EVENT.set()
-    bot.stop_polling()
-    with RUN_LOCK:
-        events = list(RUNTIME.values())
-    for event in events:
-        event.set()
-    if DOCKER_READY:
-        try:
-            names = docker_cmd(['ps','-aq','--filter','label=premiumhost.managed=1']).stdout.split()
-            if names:
-                docker_cmd(['stop','--time','8',*names],timeout=30,check=False)
-        except Exception:
-            LOG.exception('Graceful container shutdown failed')
-    save_data()
-
-if __name__=='__main__':
-    # A controller must be single-instance; multiple pollers cause Telegram 409s.
-    import fcntl
-    _instance_lock = open(os.path.join(STORAGE_DIR,'controller.lock'),'a+')
-    try:
-        fcntl.flock(_instance_lock.fileno(),fcntl.LOCK_EX|fcntl.LOCK_NB)
-    except BlockingIOError:
-        raise SystemExit('Another controller is using this storage directory.')
-    signal.signal(signal.SIGINT,shutdown)
-    signal.signal(signal.SIGTERM,shutdown)
-    try:
-        verify_docker()
-    except Exception:
-        LOG.exception('Hosting disabled: rootless Docker validation failed. Payment/admin UI remains available.')
     start_keepalive_server()
-    if DOCKER_READY:
-        restore_all()
-    threading.Thread(target=background_loop,daemon=True).start()
-    delay = 2
-    try:
-        while not STOP_EVENT.is_set():
-            started = time.monotonic()
-            try:
-                bot.infinity_polling(skip_pending=False,timeout=30,long_polling_timeout=30,
-                                     allowed_updates=['message','callback_query'])
-            except Exception:
-                LOG.exception('Polling stopped unexpectedly')
-            if STOP_EVENT.is_set():
-                break
-            delay = 2 if time.monotonic()-started>300 else min(60,delay*2)
-            STOP_EVENT.wait(delay)
-    finally:
-        shutdown()
+
+    restore_all()
+
+    print(
+        "DK HOSTING BOT IS RUNNING 🏃"
+    )
+
+    bot.infinity_polling(
+        skip_pending=True,
+        timeout=60,
+        long_polling_timeout=60
+    )
