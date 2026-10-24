@@ -11,7 +11,6 @@ import subprocess
 import shutil
 import threading
 import html
-import functools
 import psutil
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from datetime import datetime
@@ -29,9 +28,9 @@ from telebot.types import (
 # ============================================================
 
 BOT_TOKEN = os.getenv("BOT_TOKEN", "").strip()
-OWNER_ID = int(os.getenv("OWNER_ID", "0") or 0)
+OWNER_ID = int(os.getenv("OWNER_ID", "8753914631"))
 
-STORAGE_DIR = os.getenv("STORAGE_DIR", "user_files")
+STORAGE_DIR = "user_files"
 UPLOAD_DIR = os.path.join(STORAGE_DIR, "uplo556ads")
 DATA_FILE = os.path.join(STORAGE_DIR, "users.json")
 
@@ -161,712 +160,11 @@ PE_DIAMOND = PREMIUM_EMOJI_IDS[19]
 PE_BOT = PREMIUM_EMOJI_IDS[20]
 
 
-EMOJI_RUNTIME_DISABLED = {'v': False}   # set automatically if Telegram keeps rejecting custom emoji
-
-
-def custom_emoji_enabled():
-    """Premium emojis are ON by default. Only an explicit 0/false/no/off disables them."""
-    if EMOJI_RUNTIME_DISABLED['v']:
-        return False
-    return os.getenv('ENABLE_CUSTOM_EMOJI', '1').strip().lower() not in ('0', 'false', 'no', 'off')
-
-
 def pe(emoji_id, fallback="💎"):
     """
-    Telegram custom premium emoji HTML (<tg-emoji>) with a normal-emoji fallback.
+    Telegram custom premium emoji HTML.
     """
-    emoji_id = str(emoji_id).strip()
-    if not emoji_id.isdigit() or not custom_emoji_enabled():
-        return fallback
     return f'<tg-emoji emoji-id="{emoji_id}">{fallback}</tg-emoji>'
-
-
-# ---- Custom emoji IDs generated from emoji.json (12 packs, 612 unique emojis) ----
-EMOJI_JSON_MAP = {
-    "⭐": "5427086749278943412",
-    "▶": "5341270334882463507",
-    "💜": "5343584905643180151",
-    "👣": "5368593404991127537",
-    "📄": "5343597635926245720",
-    "💨": "5343766389486272458",
-    "🎙": "5343850098398871461",
-    "🔇": "5343930942568283286",
-    "😄": "5343635672156623047",
-    "🏷": "5343863498696833806",
-    "🎨": "5341665785406308254",
-    "🖼": "5341285075210224047",
-    "🙂": "5429437075642398048",
-    "💬": "5368408034202632731",
-    "📹": "5426894489362907268",
-    "🔘": "5429555393401469575",
-    "💤": "5429584229811896096",
-    "🔄": "5429166458343011591",
-    "🏪": "5431646131941556182",
-    "🤖": "5431490770089560625",
-    "⏳": "5431672893882778047",
-    "📍": "5431626942027677918",
-    "💼": "5431745143822632981",
-    "🎥": "5431443461024791843",
-    "⚡": "5427113717378595836",
-    "🎁": "5426999892155318407",
-    "🆕": "5400038655861466061",
-    "🔑": "5229153645299245972",
-    "🛡": "5229142972305515214",
-    "🔒": "5231450353290976069",
-    "🌃": "5429170023165867734",
-    "☠": "5402479073458921106",
-    "🎃": "5402405242971103041",
-    "👻": "5402069969234043254",
-    "🧟‍♂": "5400278770303114814",
-    "🍪": "5231337984061612745",
-    "❄": "5233528344368129429",
-    "🎅": "5233588396600861264",
-    "💰": "5431416651838932108",
-    "🧭": "5818967150278218011",
-    "✈": "5821043371828841290",
-    "🧳": "5819087259038649860",
-    "📸": "5818849313555483639",
-    "🗺": "5818690584449126294",
-    "🚃": "5819122456295641130",
-    "🚌": "5821101929412955791",
-    "⛰": "5818764548080930127",
-    "🌐": "5819203420724137401",
-    "🔔": "5818953372023131792",
-    "🕹": "5821072212534233982",
-    "⌨": "5818802717455290572",
-    "📶": "5821276292200271408",
-    "🔎": "5818687127000452892",
-    "👮": "5818788359379620468",
-    "👮‍♀": "5818678700274617758",
-    "👩‍💻": "5818995853544656277",
-    "🧑‍💻": "5819154994967874788",
-    "👨‍💻": "5818813162815753343",
-    "🚓": "5818727130325847330",
-    "🚕": "5819098039406562961",
-    "🆔": "5818885490065017876",
-    "😊": "5819052779041197669",
-    "⚙": "5818705028424141605",
-    "🔐": "5821453562680448557",
-    "📱": "5819099456745770209",
-    "❕": "5818865088970362886",
-    "🛂": "5818955300463447293",
-    "❔": "5818947586702184246",
-    "💻": "5818774589714468177",
-    "🖌": "5819016409258135133",
-    "🛄": "5818740513443942870",
-    "⚫": "5818899491658403448",
-    "⚪": "5819167635056627108",
-    "🔵": "5821058666207382432",
-    "🔴": "5818717642743090785",
-    "🟢": "5818812952362356039",
-    "🟡": "5819199598203244104",
-    "👀": "5818845400840277279",
-    "⏺": "5820914686018718964",
-    "🗣": "5818751353941398485",
-    "➕": "5818651538901437748",
-    "✖": "5818804920773512716",
-    "💫": "5819060814925008220",
-    "☯": "5819005890883227245",
-    "🎖": "5819146121565441618",
-    "🟦": "5821238376228981917",
-    "👤": "5818715087237549366",
-    "📷": "5821087262099639879",
-    "➗": "5821267302833720574",
-    "🉐": "5821446132387023959",
-    "☎": "5821410007417097865",
-    "🕊": "5821081816081108141",
-    "⏸": "5947029782121155470",
-    "👮‍♂": "5854973145315806460",
-    "⬆": "5866391659469606245",
-    "🚀": "5868484743061834951",
-    "🎬": "5866430606233046609",
-    "🐤": "5866424082177723899",
-    "🎰": "5866084676682125789",
-    "🎼": "5866342164266486901",
-    "🍏": "5866011417424957198",
-    "🐥": "5866169914603081371",
-    "🐩": "5866055402185035499",
-    "👁": "5886667040432853038",
-    "⚛": "5888605518087326713",
-    "☔": "5888518794107687110",
-    "✅": "5886355367541083626",
-    "🌏": "5888675895421440226",
-    "👎": "5888789252493283486",
-    "♨": "5886324117359038886",
-    "🌈": "5891237108974095799",
-    "🏳‍🌈": "5890784857507761927",
-    "❤": "5890765160787742493",
-    "🔺": "5890942929484123460",
-    "🟥": "5890710155141582641",
-    "🎇": "5888999340818566791",
-    "↗": "5891147709229830419",
-    "✏": "5956143844457189176",
-    "⏱": "5981043230160981261",
-    "❣": "5980792215092333916",
-    "🔓": "5981075141767990672",
-    "⬇": "5979076319823007456",
-    "🗑": "5979070714890686650",
-    "🤝": "5978856151209480380",
-    "🔈": "5981056518789794953",
-    "👍": "5978637417115029380",
-    "☝": "5978555237210787432",
-    "🔊": "5980884380795539169",
-    "❌": "5980953710157632545",
-    "🚫": "5978714271259823413",
-    "🇷🇺": "5981261427384520401",
-    "🌟": "5981137088081301019",
-    "💎": "5800688138833629633",
-    "🤬": "5801003385138188414",
-    "🧠": "5801027411185242471",
-    "😮": "5798523741604419569",
-    "📅": "5800810214689084012",
-    "🎾": "5798459514663473705",
-    "🔮": "5800735009811730616",
-    "✨": "5800833282958430823",
-    "👛": "5798937402789597866",
-    "💵": "5800720664620961831",
-    "🥂": "5803393311100113792",
-    "👑": "5803032306213982905",
-    "🔖": "5803151379887297481",
-    "📣": "5803175856905917502",
-    "📌": "5801018335919347111",
-    "🐱": "5803403881014629353",
-    "💯": "5803420575552508108",
-    "🩷": "5800834464074438266",
-    "🖕": "5803375925072499189",
-    "🌚": "5802946896494334636",
-    "🎄": "5802903921051571261",
-    "🏅": "5803357151770449172",
-    "💲": "5866146206383608554",
-    "❓": "5886448503906899325",
-    "✉": "5891268505185030578",
-    "😯": "5888935788187490785",
-    "📎": "5888584382553265934",
-    "💥": "5888974760720732797",
-    "🌿": "5891031465939964877",
-    "🫊": "5891198677606732755",
-    "🏿": "5891063600885273198",
-    "🤮": "5890958576049984200",
-    "🧛‍♂": "5890944411247841790",
-    "💔": "5890772268958617745",
-    "💕": "5888555619157285122",
-    "🌀": "5913534466051021148",
-    "♻": "5911100572508885928",
-    "🕵": "5911522793563886333",
-    "🔋": "5913513644049570217",
-    "🪫": "5913614837774029701",
-    "🍽": "5913264639025615311",
-    "🇹🇷": "5913265296155611115",
-    "💶": "5913391091452743449",
-    "👜": "5926860096008098405",
-    "☀": "5924629264224753123",
-    "🛜": "5927284851093803771",
-    "🍎": "5927042730902426764",
-    "🟣": "5927197323955278457",
-    "🌙": "5924764134787782252",
-    "📋": "5926764846518376076",
-    "⬛": "5924517114038719190",
-    "✔": "5931760627923030124",
-    "☑": "5931408616698416937",
-    "🔥": "5931344368282636710",
-    "💦": "5967560851077469602",
-    "🚨": "5967317893367468926",
-    "🎤": "5969607557612835024",
-    "⌚": "5969545478155539601",
-    "♾": "5967617883948192905",
-    "🎮": "6008006717017690954",
-    "⚠": "6008233706039284019",
-    "💙": "5780496071645991525",
-    "🪤": "5780922965625410989",
-    "➖": "5789644639749281149",
-    "5⃣": "5791772473921901213",
-    "6⃣": "5789851558388700130",
-    "🥰": "5789793808258437906",
-    "🕶": "5789607097440147328",
-    "💧": "5789876430544311548",
-    "1⃣": "5800923472976679740",
-    "2⃣": "5802912291942830882",
-    "3⃣": "5801094885121463194",
-    "4⃣": "5800901723262293755",
-    "7⃣": "5801177052140803279",
-    "8⃣": "5801170261797507837",
-    "9⃣": "5800648479105618763",
-    "🔍": "5803403369913520877",
-    "🛸": "5800824143268025850",
-    "🦁": "5803360604924154219",
-    "🛒": "5803157955482227929",
-    "🤩": "6084695058894819673",
-    "❤‍🔥": "6089028758205897441",
-    "🔝": "6086784182527202100",
-    "💀": "6087162775304409688",
-    "👹": "6086817820711064076",
-    "😉": "6089024570612781324",
-    "🚩": "6087060924449953862",
-    "💭": "6086708148721160702",
-    "☄": "6093377734715642495",
-    "💠": "6093865234978574850",
-    "🟿": "6093513636070822132",
-    "➡": "6093852921307337895",
-    "☃": "6093818260921258328",
-    "📊": "6093382540784046658",
-    "🏭": "6093596992796102377",
-    "🖥": "6093875388281263010",
-    "😀": "6093864814071780526",
-    "😁": "6093425709500339144",
-    "🥹": "6093835694193512831",
-    "😢": "6093376514944929700",
-    "😃": "6095627640448750533",
-    "🧐": "6093710452947161299",
-    "🥲": "6093467039970629408",
-    "👏": "6093744967304352336",
-    "😎": "6093639774965338848",
-    "🏵": "6093584842333622858",
-    "🤔": "6093666528316625608",
-    "😒": "6093576514392037256",
-    "🤣": "6093661404420641058",
-    "🥺": "6093779241143374561",
-    "🤗": "6095742874421301875",
-    "🏝": "6093464720688288321",
-    "🍴": "6093451264555750089",
-    "⛔": "6093778090092139204",
-    "👋": "6095851644468072524",
-    "🕓": "6093456762113888541",
-    "😂": "6093522689861882360",
-    "🤨": "6093493892106162082",
-    "😧": "6095888417978061469",
-    "🤪": "6096026428162183499",
-    "😍": "6093725459562893833",
-    "😭": "6093930033150170743",
-    "😏": "6093748819890018226",
-    "🧧": "6246774261218810895",
-    "🤙": "5780840497958360623",
-    "😆": "5780413823022273797",
-    "😱": "5783091623462180025",
-    "😟": "5783151611270403662",
-    "😾": "5783124312458270318",
-    "😨": "5782753386197685582",
-    "😼": "5783023329187206172",
-    "🎈": "5782734256413349701",
-    "😑": "5782876166427775766",
-    "😝": "5782993191401689635",
-    "😺": "5783154622042477033",
-    "😸": "5782681033178617588",
-    "🌸": "5782789524052513567",
-    "🐶": "5780764734735259441",
-    "💃": "5780636053220103355",
-    "😔": "5782882973950940285",
-    "🦶": "5782867877140895194",
-    "🤞": "5782827367009359233",
-    "🐈": "5783166815454630601",
-    "🔨": "5783010354091005955",
-    "🥡": "5783000136363807783",
-    "😡": "5782833521697494295",
-    "🌹": "5783036501851902672",
-    "🫂": "5783182062588531009",
-    "🟪": "5783019966227813296",
-    "🤫": "5782961266909779599",
-    "🙄": "5783066953170032069",
-    "🐣": "5785100057543972225",
-    "🤓": "5782848150356104237",
-    "☺": "5785056124323500928",
-    "◼": "5785181606088020813",
-    "📨": "6010453886303737503",
-    "📝": "6010292709066019210",
-    "🕖": "6010415291727615186",
-    "🔶": "6010071909092298592",
-    "🔹": "6010352555140321877",
-    "🔸": "6010479565913198652",
-    "‼": "6010089965134811556",
-    "❗": "6010323791744341519",
-    "🛩": "6010061175969027500",
-    "🆏": "6010080507616826629",
-    "❤‍🩹": "6010209683053220363",
-    "🕦": "6010153921492816021",
-    "🧑": "6010482465016123577",
-    "😇": "6010068610557417146",
-    "😚": "6298544959486167081",
-    "😥": "6298480869984175913",
-    "👽": "6298566954013689358",
-    "🐺": "6220014823963363136",
-    "🐹": "6219810752887262728",
-    "🐋": "6219882697884436514",
-    "☜": "6219727185708582935",
-    "😴": "6298513503145691368",
-    "🔻": "6255512604110751681",
-    "🆒": "6170120369274358018",
-    "🥠": "6298540449770506365",
-    "👩‍🚒": "6298452746538321740",
-    "🇮🇳": "6138853050309150669",
-    "🕺": "6105135237753210602",
-    "0⃣": "6219488394116859803",
-    "🫶": "6298454498884978957",
-    "😘": "6298412927896520857",
-    "🍄": "6102848541330249485",
-    "💍": "6102796683895117675",
-    "😤": "6034865170449175739",
-    "🙁": "6035210301136182368",
-    "😈": "6035136809950778133",
-    "👿": "6032985916098750553",
-    "👅": "6035374291577475270",
-    "😠": "6035355642829475999",
-    "😕": "6035072209347678547",
-    "👒": "6033077437556855182",
-    "💣": "6032673796530377389",
-    "♋": "6032916496542339992",
-    "☁": "6034832094906028632",
-    "🩸": "6035343380697846690",
-    "🪽": "6035194237958493530",
-    "🫌": "6035317340311129897",
-    "🗡": "6033067975743902590",
-    "🆗": "4956649845952611245",
-    "🚷": "4958472535583753086",
-    "🪩": "4956247175588742152",
-    "🧝": "4956582878822531899",
-    "🔗": "4958689671950369798",
-    "ℹ": "4958529074533238201",
-    "🐦‍⬛": "4958830950604604428",
-    "🪅": "4956614279328433146",
-    "🤭": "4956252273714922652",
-    "🌕": "4956273117191213833",
-    "🚗": "4958801766301828295",
-    "🦌": "4956761150030087025",
-    "🍭": "4956555872068174842",
-    "☕": "4956252540002894879",
-    "🌲": "4956557431141303451",
-    "🍨": "4956420821116519533",
-    "🕷": "4958923223681991654",
-    "🔽": "4956720180337050608",
-    "🧤": "4956379112689107750",
-    "🎀": "4956722293460960020",
-    "©": "4956313992394966051",
-    "🫐": "4958990289596318519",
-    "🦄": "4956529835976426308",
-    "🎩": "4956564307383944011",
-    "⚰": "4958724224962265918",
-    "🧦": "4958668411862254755",
-    "🧹": "4956591954088428445",
-    "🍲": "4958644823901864780",
-    "🎉": "4956308456182121758",
-    "🌛": "4958828150285927471",
-    "🍃": "4956468890390496140",
-    "🍑": "4956214684161147887",
-    "🫦": "4956516272469705982",
-    "⛸": "4958738711886955477",
-    "💌": "4958503072801228000",
-    "🪦": "4956214142995268150",
-    "🔼": "4958790109760587106",
-    "💋": "4956680567853679460",
-    "🩶": "4956750494216225777",
-    "🗳": "4956214413578207998",
-    "📉": "4956552088201986883",
-    "💐": "4956353063712457393",
-    "🌺": "4956283708580563433",
-    "🌩": "4956233646441760046",
-    "🦋": "4958719848390591540",
-    "😶‍💫": "4956500084737966923",
-    "💡": "4958665796227171144",
-    "💝": "4958839553424098323",
-    "🎏": "4956499169909932961",
-    "🧶": "4958558095627256768",
-    "🎆": "4958488079070397388",
-    "🪟": "4956494239287477123",
-    "💩": "4956505651015582631",
-    "🧩": "4958903389523018769",
-    "🏡": "4958485609464202497",
-    "📈": "4956599758044005301",
-    "💖": "4958577444454925201",
-    "🍰": "4958931508673905639",
-    "🧸": "4956708038464504901",
-    "👈": "4956304191279596468",
-    "🦴": "4956357289960276851",
-    "🧪": "4956561910792192697",
-    "👼": "4958963647914181913",
-    "🥳": "4956425077429109847",
-    "🐸": "4956488741729338655",
-    "🐈⬛": "4956598503913554822",
-    "🍬": "4958563494401147639",
-    "🔜": "4956507210088711059",
-    "🎶": "4958562566688211974",
-    "🏳": "5433754814855001814",
-    "🇨🇳": "5433827537241258614",
-    "🇿🇦": "5431855966863766753",
-    "🇧🇷": "5431769908604056769",
-    "🇳🇴": "5434147542369579483",
-    "🇬🇧": "5435996255207567113",
-    "🇦🇨": "5433636707549331311",
-    "🇦🇫": "5433845881046578644",
-    "🇦🇮": "5433627189901801019",
-    "🇦🇱": "5433946537900128161",
-    "🇦🇴": "5433750193470191473",
-    "🇦🇷": "5433754239329383923",
-    "🇦🇪": "5433804400252434985",
-    "🇦🇺": "5431556723607352698",
-    "🇦🇹": "5431640943621060829",
-    "🇧🇾": "5431375858239550223",
-    "🇧🇯": "5433682092468746953",
-    "🇧🇩": "5433854239052935880",
-    "🇧🇧": "5434027579638035690",
-    "🇧🇪": "5431739800883312139",
-    "🇧🇦": "5433598052843665552",
-    "🇧🇼": "5431431529605642522",
-    "🇧🇿": "5433838931789492934",
-    "🇧🇲": "5433609855413794108",
-    "🇧🇳": "5433991338703991663",
-    "🇧🇱": "5433895109961725692",
-    "🇧🇫": "5433789964867352475",
-    "🇧🇹": "5431663303220804322",
-    "🇨🇦": "5433666360003540231",
-    "🇨🇩": "5433696429069580735",
-    "🇨🇫": "5433774971136521802",
-    "🇨🇬": "5433960238845802718",
-    "🇨🇭": "5431865097964237519",
-    "🇨🇮": "5431374711483282830",
-    "🇨🇰": "5433825269498525925",
-    "🇨🇱": "5431561302042488884",
-    "🇨🇲": "5433630999537792332",
-    "🇨🇴": "5431703839122141424",
-    "🇨🇵": "5433861570562111275",
-    "🇨🇷": "5431489619038320862",
-    "🇨🇻": "5434096943359866241",
-    "🇨🇼": "5433958877341169005",
-    "🇨🇽": "5433708502222649633",
-    "🇨🇾": "5433614889115464671",
-    "🇨🇿": "5434140679011842196",
-    "🇩🇪": "5431462560744353934",
-    "🇩🇬": "5431619494554383246",
-    "🇸🇻": "5434134189316257066",
-    "🏴󠁧󠁢󠁥󠁮󠁧󠁿": "5431508997930758727",
-    "🇪🇨": "5433723401464198287",
-    "🇪🇪": "5433727662071755290",
-    "🇪🇬": "5433804408842368654",
-    "🇪🇷": "5434011361841525609",
-    "🇪🇸": "5433640560134994324",
-    "🇪🇹": "5431380440969654931",
-    "🇪🇺": "5434067424049639550",
-    "🇫🇮": "5433979415874779870",
-    "🇫🇯": "5433982207603520017",
-    "🇫🇰": "5433596974806873997",
-    "🇫🇲": "5433814347396692144",
-    "🇫🇴": "5431695798943363996",
-    "🇫🇷": "5434041611296192616",
-    "🇬🇦": "5433935894971168754",
-    "🇬🇩": "5431676201007592926",
-    "🇬🇪": "5434115081006756195",
-    "🇬🇫": "5434072118448894385",
-    "🇬🇬": "5434036689263670086",
-    "🇬🇭": "5433628435442316429",
-    "🇬🇮": "5433884376838454074",
-    "🇬🇱": "5433882955204279044",
-    "🇬🇲": "5433749102548496991",
-    "🇬🇳": "5434155397864764491",
-    "🇬🇵": "5433810168393511493",
-    "🇬🇶": "5434067655977874913",
-    "🇬🇷": "5433860784583096428",
-    "🇬🇸": "5431626087329182684",
-    "🇬🇹": "5433643519367461444",
-    "🇬🇺": "5433755347430946164",
-    "🇬🇼": "5433792670696748414",
-    "🇬🇾": "5434004021742417775",
-    "🇭🇳": "5433884162090088194",
-    "🇭🇷": "5433820583689205435",
-    "🇭🇹": "5433652375590025431",
-    "🇭🇺": "5431785473565537213",
-    "🇭🇰": "5433727778035872782",
-    "🇮🇩": "5433872853441196535",
-    "🇮🇪": "5431620340662940910",
-    "🇮🇱": "5431414444225738871",
-    "🇮🇲": "5433876972314836083",
-    "🇮🇶": "5434119663736862995",
-    "🇮🇷": "5431669247455540884",
-    "🇮🇸": "5433626051735467592",
-    "🇮🇹": "5433833485770964033",
-    "🇯🇪": "5433773682646332733",
-    "🇯🇲": "5433968339154122439",
-    "🇯🇴": "5434150334098327966",
-    "🇯🇵": "5434010919459894038",
-    "🇰🇪": "5433943093336356065",
-    "🇰🇬": "5433598722858562967",
-    "🇰🇭": "5434130474169544969",
-    "🇰🇮": "5433859405898594234",
-    "🇰🇲": "5431519649449653173",
-    "🇰🇳": "5434064563601421981",
-    "🇰🇵": "5431428076451934112",
-    "🇰🇷": "5433798752370439037",
-    "🇰🇼": "5433674924168328689",
-    "🇰🇾": "5434012796360604182",
-    "🇰🇿": "5431656358258685474",
-    "🇱🇦": "5434131139889478358",
-    "🇱🇧": "5433895144321462723",
-    "🇱🇨": "5434026158003862063",
-    "🇱🇮": "5431350891594658893",
-    "🇱🇰": "5433737613510981562",
-    "🇱🇷": "5433836092816108548",
-    "🇱🇸": "5434142701941437163",
-    "🇱🇹": "5434057098948261250",
-    "🇱🇺": "5433714227414054291",
-    "🇱🇻": "5431434686406604479",
-    "🇱🇾": "5433852121634060293",
-    "🇲🇦": "5433776225266972326",
-    "🇲🇨": "5433851438734259274",
-    "🇲🇩": "5433972762970437003",
-    "🇲🇪": "5433748668756802256",
-    "🇲🇫": "5434098446598419585",
-    "🇲🇬": "5433855712226718930",
-    "🇲🇭": "5433920471743607048",
-    "🇲🇰": "5431353614603926322",
-    "🇲🇱": "5431394721735914525",
-    "🇲🇲": "5433738201921500487",
-    "🇲🇳": "5431484894574295376",
-    "🇲🇴": "5433613703704490463",
-    "🇲🇷": "5431830051031103147",
-    "🇲🇸": "5434125517777286321",
-    "🇲🇹": "5434001565021123877",
-    "🇲🇺": "5431894290856949874",
-    "🇲🇻": "5433721073591926542",
-    "🇲🇼": "5433691077540330355",
-    "🇲🇽": "5431588626624427422",
-    "🇲🇾": "5433902785068283672",
-    "🇲🇿": "5434129692485498098",
-    "🇳🇦": "5433867115364889538",
-    "🇳🇨": "5433785261878162812",
-    "🇳🇪": "5431696408828720537",
-    "🇳🇫": "5433711929606551683",
-    "🇳🇬": "5434045605615777483",
-    "🇳🇮": "5431755073787016798",
-    "🇳🇱": "5431520783321019240",
-    "🇳🇵": "5434132406904830055",
-    "🇳🇷": "5434009493530752727",
-    "🇳🇺": "5433910876786670092",
-    "🇳🇿": "5434058864179822603",
-    "🇴🇲": "5433834847275594263",
-    "🇵🇦": "5434131504961696728",
-    "🇵🇪": "5434029851675734900",
-    "🇵🇫": "5434040911216522968",
-    "🇵🇬": "5433629779767081651",
-    "🇵🇭": "5433772127868172193",
-    "🇵🇰": "5433640100573491806",
-    "🇵🇱": "5433678179753538895",
-    "🇵🇲": "5434152992683079729",
-    "🇵🇳": "5431529734032865031",
-    "🇵🇷": "5433684690923961019",
-    "🇵🇸": "5433895436379240198",
-    "🇵🇹": "5431788596006762529",
-    "🇵🇼": "5434076031164103400",
-    "🇵🇾": "5433852276252883640",
-    "🇶🇦": "5433992296481700344",
-    "🇷🇪": "5434153928985949656",
-    "🇷🇴": "5434094173105960379",
-    "🇷🇸": "5434009132753499322",
-    "🇷🇼": "5434078960331796980",
-    "🇼🇸": "5433735143904786332",
-    "🇸🇦": "5433811229250434478",
-    "🎟": "5458871830846656370",
-    "📦": "5458790973792340888",
-    "💳": "5460959824902638811",
-    "🔪": "5458848109742280160",
-    "🔫": "5458685884532545296",
-    "💊": "5460985873879288634",
-    "🦈": "5460680720747877706",
-    "🦉": "5461152772013444213",
-    "🐒": "5460791419234963381",
-    "🦊": "5460660203689105734",
-    "🐰": "5461154601669510918",
-    "🦦": "5460903002485314455",
-    "🐼": "5460880372302629461",
-    "🦝": "5460640760372154944",
-    "🐧": "5458676946705602852",
-    "🦆": "5458484867178188906",
-    "👾": "5460913374831332135",
-    "🐕": "5458404181922566812",
-    "🦅": "5461099497239105126",
-    "🐉": "5458692095055255320",
-    "🐢": "5458626906041636543",
-    "🏆": "5460948786836687726",
-    "🎲": "5463376160618468145",
-    "🥇": "5462947101975530592",
-    "🐔": "5350310639745130183",
-    "🫥": "5350783674558211235",
-    "😷": "5350450260541990949",
-    "🤤": "5350534493440595973",
-    "🩴": "5348281761619011725",
-    "🩱": "5348586579742976907",
-    "❇": "5370796766163657234",
-    "🪧": "5371000046965780387",
-    "🎗": "5370885517367858328",
-    "🎯": "5228855127892327218",
-    "🥈": "5231431133312348035",
-}
-
-# Older IDs are kept only for emojis that emoji.json does not contain (for example 📁 and 📤).
-_LEGACY_EMOJI_MAP = {
-    "🔥": PE_FIRE, "⭐": PE_STAR, "🚀": PE_ROCKET, "👑": PE_CROWN, "🛡": PE_SHIELD,
-    "💰": PE_MONEY, "📱": PE_PHONE, "✅": PE_CHECK, "❌": PE_CROSS, "⚠": PE_WARNING,
-    "🔒": PE_LOCK, "🎁": PE_GIFT, "👤": PE_USER, "📤": PE_UPLOAD, "📁": PE_FOLDER,
-    "⚙": PE_SETTINGS, "🖥": PE_SERVER, "💎": PE_DIAMOND, "🤖": PE_BOT,
-}
-CUSTOM_EMOJI_MAP = {**_LEGACY_EMOJI_MAP, **EMOJI_JSON_MAP}
-
-
-def _norm_emoji(value):
-    return value.replace('\ufe0f', '')
-
-
-def emoji_id_for(char, default=None):
-    return CUSTOM_EMOJI_MAP.get(_norm_emoji(char), default)
-
-
-# every named constant now points at the emoji.json ID where one exists
-PE_FIRE, PE_STAR, PE_ROCKET, PE_CROWN = (emoji_id_for(c, d) for c, d in (("🔥", PE_FIRE), ("⭐", PE_STAR), ("🚀", PE_ROCKET), ("👑", PE_CROWN)))
-PE_SHIELD, PE_MONEY, PE_PHONE, PE_CHECK = (emoji_id_for(c, d) for c, d in (("🛡", PE_SHIELD), ("💰", PE_MONEY), ("📱", PE_PHONE), ("✅", PE_CHECK)))
-PE_CROSS, PE_WARNING, PE_LOCK, PE_GIFT = (emoji_id_for(c, d) for c, d in (("❌", PE_CROSS), ("⚠", PE_WARNING), ("🔒", PE_LOCK), ("🎁", PE_GIFT)))
-PE_APPROVE, PE_USER, PE_ADMIN = emoji_id_for("✅", PE_APPROVE), emoji_id_for("👤", PE_USER), emoji_id_for("🛡", PE_ADMIN)
-PE_UPLOAD, PE_FOLDER = emoji_id_for("📤", PE_UPLOAD), emoji_id_for("📁", PE_FOLDER)
-PE_SETTINGS, PE_SERVER, PE_DIAMOND, PE_BOT = (emoji_id_for(c, d) for c, d in (("⚙", PE_SETTINGS), ("🖥", PE_SERVER), ("💎", PE_DIAMOND), ("🤖", PE_BOT)))
-
-_EMOJI_ALT = '|'.join(''.join(re.escape(c) + '\ufe0f?' for c in k)
-                      for k in sorted(CUSTOM_EMOJI_MAP, key=len, reverse=True))
-_EMOJI_RE = re.compile(r'(<tg-emoji\b.*?</tg-emoji>|<pre>.*?</pre>|<code>.*?</code>)|(' + _EMOJI_ALT + ')', re.S)
-_LEAD_EMOJI_RE = re.compile('^(' + _EMOJI_ALT + r')\s*')
-
-
-def decorate_emojis(text):
-    """Turn known Unicode emojis in an HTML message into custom emoji entities."""
-    if not isinstance(text, str) or not custom_emoji_enabled():
-        return text
-    if len(_EMOJI_RE.findall(text)) > 90:      # Telegram allows 100 entities per message
-        return text
-
-    def swap(m):
-        if m.group(1):
-            return m.group(1)
-        return pe(CUSTOM_EMOJI_MAP[_norm_emoji(m.group(2))], m.group(2))
-    return _EMOJI_RE.sub(swap, text)
-
-
-BUTTON_ICON_STATE = {'disabled': os.getenv('BUTTON_EMOJI', '1').strip().lower() in ('0', 'false', 'no', 'off')}
-_PlainInlineButton = InlineKeyboardButton
-
-
-class InlineKeyboardButton(_PlainInlineButton):
-    """Moves a leading emoji of the label into icon_custom_emoji_id (premium icon on the button)."""
-
-    def __init__(self, text, *args, **kwargs):
-        self._plain_text = text
-        self._icon = None
-        label = icon = None
-        if custom_emoji_enabled() and not BUTTON_ICON_STATE['disabled'] and 'icon_custom_emoji_id' not in kwargs:
-            m = _LEAD_EMOJI_RE.match(text)
-            if m and text[m.end():].strip():
-                icon = CUSTOM_EMOJI_MAP.get(_norm_emoji(m.group(1)))
-                label = text[m.end():]
-        if icon:
-            try:
-                super().__init__(label, *args, icon_custom_emoji_id=icon, **kwargs)
-                self._icon = icon
-                return
-            except TypeError:
-                BUTTON_ICON_STATE['disabled'] = True   # installed library predates Bot API 9.4
-        super().__init__(text, *args, **kwargs)
 
 
 def safe_html(value):
@@ -880,121 +178,14 @@ def premium_header(title, emoji_id=PE_CROWN, fallback="👑"):
     )
 
 
-
 # ============================================================
 # TELEGRAM BOT INIT
 # ============================================================
-
-if not BOT_TOKEN or OWNER_ID <= 0:
-    raise SystemExit("Set BOT_TOKEN and OWNER_ID in the environment variables first.")
 
 bot = telebot.TeleBot(
     BOT_TOKEN,
     parse_mode=None
 )
-
-
-# ---- Premium emoji send layer -------------------------------------------------
-# Wraps the send/edit methods ONCE so every HTML message and caption in the bot
-# (legacy handlers included) gets custom emoji entities and button icons. If Telegram
-# rejects them, the message is resent in steps: without button icons, then without
-# custom emoji, so a message is never lost.
-EMOJI_STATS = {'sent':0,'rejected':0,'button_fallbacks':0,'last_error':''}
-_TG_EMOJI_TAG = re.compile(r'<tg-emoji[^>]*>(.*?)</tg-emoji>', re.S)
-RAW_SEND_MESSAGE = bot.send_message
-
-def strip_custom_emoji(value):
-    return _TG_EMOJI_TAG.sub(r'\1', value) if isinstance(value,str) else value
-
-def _markup_has_icons(markup):
-    return any(getattr(b,'_icon',None) for row in (getattr(markup,'keyboard',None) or []) for b in row)
-
-def strip_button_icons(markup):
-    import copy
-    clone = copy.deepcopy(markup)
-    for row in clone.keyboard:
-        for b in row:
-            if getattr(b,'_icon',None):
-                b.icon_custom_emoji_id = None
-                b.text = b._plain_text
-                b._icon = None
-    return clone
-
-def _install_emoji_layer():
-    def make(original, pos, field):
-        @functools.wraps(original)
-        def wrapper(*args, **kwargs):
-            args = list(args)
-            if kwargs.get('parse_mode') == 'HTML':
-                if field in kwargs:
-                    kwargs[field] = decorate_emojis(kwargs[field])
-                elif pos is not None and len(args) > pos:
-                    args[pos] = decorate_emojis(args[pos])
-            markup = kwargs.get('reply_markup')
-            used_text = any('<tg-emoji' in v for v in list(args)+list(kwargs.values()) if isinstance(v,str))
-            used_icon = _markup_has_icons(markup)
-            try:
-                result = original(*args, **kwargs)
-                if used_text:
-                    EMOJI_STATS['sent'] += 1
-                return result
-            except Exception as exc:
-                if not (getattr(exc,'error_code',0) == 400 and 'not modified' not in str(exc).lower()
-                        and (used_text or used_icon)):
-                    raise
-                EMOJI_STATS['last_error'] = str(exc)[:300]
-                if used_icon:
-                    kw2 = dict(kwargs)
-                    kw2['reply_markup'] = strip_button_icons(markup)
-                    try:
-                        result = original(*args, **kw2)
-                        BUTTON_ICON_STATE['disabled'] = True
-                        EMOJI_STATS['button_fallbacks'] += 1
-                        print(f'Telegram rejected button icons; disabled: {exc}')
-                        return result
-                    except Exception as exc2:
-                        if getattr(exc2,'error_code',0) != 400:
-                            raise
-                        exc, kwargs = exc2, kw2
-                if not used_text:
-                    raise exc
-                EMOJI_STATS['rejected'] += 1
-                if EMOJI_STATS['rejected'] >= 3 and EMOJI_STATS['sent'] == 0:
-                    EMOJI_RUNTIME_DISABLED['v'] = True
-                    print('Telegram keeps rejecting custom emoji; switched off until restart.')
-                print(f'Custom emoji rejected, resending plain: {exc}')
-                return original(*[strip_custom_emoji(a) for a in args],
-                                **{k:strip_custom_emoji(v) for k,v in kwargs.items()})
-        wrapper._emoji_layer = True
-        return wrapper
-    for name, pos, field in (('send_message',1,'text'),('edit_message_text',0,'text'),('send_photo',None,'caption'),
-                             ('send_document',None,'caption'),('edit_message_caption',None,'caption')):
-        current = getattr(bot, name)
-        if not getattr(current, '_emoji_layer', False):
-            setattr(bot, name, make(current, pos, field))
-
-_install_emoji_layer()
-
-def emoji_self_test(uid):
-    """Owner command /emojitest: sends sample custom emojis plus a button icon and reports Telegram's answer."""
-    sample = ' '.join(pe(i,'•') for i in list(EMOJI_JSON_MAP.values())[:40])
-    probe = InlineKeyboardMarkup([[InlineKeyboardButton('👑 Button icon test','s:home')]])
-    report = []
-    try:
-        RAW_SEND_MESSAGE(uid, '🧪 <b>Custom emoji test</b>\n'+sample, parse_mode='HTML')
-        report.append('✅ Text: Telegram accepted custom emoji entities.')
-    except Exception as exc:
-        report.append('⚠️ Text rejected: <code>'+safe_html(str(exc)[:300])+'</code>')
-    try:
-        RAW_SEND_MESSAGE(uid, 'Button icon probe 👇', reply_markup=probe)
-        report.append('✅ Button: accepted' + (' (icon sent)' if _markup_has_icons(probe) else ' (library has no icon support, plain label sent)'))
-    except Exception as exc:
-        report.append('⚠️ Button rejected: <code>'+safe_html(str(exc)[:300])+'</code>')
-    report.append(f'Sent: {EMOJI_STATS["sent"]} • Rejected: {EMOJI_STATS["rejected"]} • Button fallbacks: {EMOJI_STATS["button_fallbacks"]}\n'
-                  f'Enabled: {custom_emoji_enabled()} • Button icons: {not BUTTON_ICON_STATE["disabled"]}\n'
-                  'If the emojis above look plain, Telegram is accepting but not showing them for this bot.')
-    bot.send_message(uid, '\n'.join(report), parse_mode='HTML')
-
 
 
 # ============================================================
@@ -1245,9 +436,13 @@ def notify_owner(text, index=0):
 
     try:
 
+        emoji_id = PREMIUM_EMOJI_IDS[
+            index % len(PREMIUM_EMOJI_IDS)
+        ]
+
         bot.send_message(
             OWNER_ID,
-            f"{pe(emoji_id_for('🔔', PE_STAR), '🔔')} {text}",
+            f"{pe(emoji_id, '🔔')} {text}",
             parse_mode="HTML"
         )
 
@@ -3675,13 +2870,6 @@ def start_keepalive_server():
         print(f"Keep-alive server error: {e}")
 
 
-@bot.message_handler(commands=["emojitest"])
-def emojitest_command(message):
-
-    if message.from_user.id == OWNER_ID:
-        emoji_self_test(message.from_user.id)
-
-
 @bot.message_handler(
     commands=["start"]
 )
@@ -5690,25 +4878,10 @@ def callback_query(call):
 
         fname = data[4:]
 
-        if fname not in users[uid]["files"]:
-
-            bot.answer_callback_query(
-                call.id,
-                "❌ File not found."
-            )
-
-            return
-
-        path = safe_user_path(uid, fname)
-
-        if not path:
-
-            bot.answer_callback_query(
-                call.id,
-                "❌ Invalid path."
-            )
-
-            return
+        path = os.path.join(
+            user_folder(uid),
+            fname
+        )
 
         stop_script(uid, path)
 
@@ -6144,42 +5317,2098 @@ def restore_all():
 # BOT START
 # ============================================================
 
+# ============================================================
+# PREMIUM SUBSCRIPTION, UPI QR PAYMENTS & SUPPORT SYSTEM
+# (Integrated seamlessly with the original DK Hosting Bot UI)
+# ============================================================
+
+import sqlite3
+import logging
+from logging.handlers import RotatingFileHandler
+from contextlib import contextmanager
+from pathlib import Path
+from io import BytesIO
+from urllib.parse import urlencode
+from decimal import Decimal, InvalidOperation
+from collections import defaultdict, deque
+from datetime import timezone
+import calendar
+import secrets
+import signal
+import functools
+
+ADMIN_IDS = {int(x) for x in os.getenv("ADMIN_IDS", "").split(",") if x.strip().isdigit()}
+ADMIN_IDS.add(OWNER_ID)
+
+DB_PATH = os.path.join(STORAGE_DIR, "premium.sqlite3")
+ORDER_TTL = int(os.getenv("ORDER_TTL_SECONDS", "900"))
+RATE_LIMIT = int(os.getenv("RATE_LIMIT_PER_MINUTE", "45"))
+CUSTOM_EMOJI_ID = os.getenv("CUSTOM_EMOJI_ID", "")
+
+STOP_EVENT = threading.Event()
+DB_LOCK = threading.RLock()
+UI_LOCK = threading.RLock()
+UI_STATE = {}
+RATE = defaultdict(deque)
+
+LOG = logging.getLogger("premiumhost")
+LOG.setLevel(logging.INFO)
+if not LOG.handlers:
+    _handler = RotatingFileHandler(
+        os.path.join(STORAGE_DIR, "host.log"),
+        maxBytes=2_000_000,
+        backupCount=4
+    )
+    _handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
+    LOG.addHandler(_handler)
+    LOG.addHandler(logging.StreamHandler())
+
+
+@contextmanager
+def database(write=False):
+    with DB_LOCK:
+        con = sqlite3.connect(DB_PATH, timeout=30)
+        con.row_factory = sqlite3.Row
+        try:
+            con.execute("PRAGMA foreign_keys=ON")
+            con.execute("PRAGMA busy_timeout=30000")
+            if write:
+                con.execute("BEGIN IMMEDIATE")
+            yield con
+            con.commit()
+        except BaseException:
+            con.rollback()
+            raise
+        finally:
+            con.close()
+
+
+def rows(sql, args=()):
+    with database() as con:
+        return [dict(r) for r in con.execute(sql, args)]
+
+
+def execute(sql, args=()):
+    with database(True) as con:
+        return con.execute(sql, args).lastrowid
+
+
+def setting(key, default=""):
+    result = rows("SELECT value FROM settings WHERE key=?", (key,))
+    return result[0]["value"] if result else str(default)
+
+
+def set_setting(key, value):
+    execute(
+        "INSERT INTO settings(key,value) VALUES (?,?) "
+        "ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+        (key, str(value))
+    )
+
+
+def backup_database(send=False):
+    folder = Path(STORAGE_DIR) / "backups"
+    folder.mkdir(exist_ok=True)
+    dest = folder / (
+        "premium-"
+        + datetime.now(timezone.utc).strftime("%Y%m%d-%H%M%S")
+        + ".sqlite3"
+    )
+    with DB_LOCK:
+        src = sqlite3.connect(DB_PATH)
+        dst = sqlite3.connect(str(dest))
+        try:
+            src.backup(dst)
+        finally:
+            dst.close()
+            src.close()
+    for old in sorted(folder.glob("premium-*.sqlite3"))[:-7]:
+        old.unlink(missing_ok=True)
+    if send:
+        with dest.open("rb") as stream:
+            telegram(
+                bot.send_document,
+                OWNER_ID,
+                stream,
+                caption=(
+                    f"{pe(PE_CHECK, '✅')} <b>Database Backup</b>\n"
+                    f"Store securely: contains user &amp; subscription data."
+                ),
+                parse_mode="HTML"
+            )
+    return dest
+
+
+DEFAULT_PLANS = [
+    ("Weekly Plan", 4900, 7, 5, "7 days of premium hosting", "💎"),
+    ("Monthly Plan", 9900, 30, 10, "30 days of premium hosting", "👑")
+]
+
+UPI_RE = re.compile(r"[A-Za-z0-9._-]{2,64}@[A-Za-z][A-Za-z0-9.-]{1,30}")
+
+
+def init_premium_db():
+    if os.path.exists(DB_PATH):
+        try:
+            backup_database()
+        except Exception as e:
+            LOG.warning("Initial backup skipped: %s", e)
+    with database() as con:
+        con.execute("PRAGMA journal_mode=WAL")
+        con.executescript("""
+        CREATE TABLE IF NOT EXISTS settings(
+            key TEXT PRIMARY KEY,
+            value TEXT NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS users(
+            id INTEGER PRIMARY KEY,
+            legacy_json TEXT NOT NULL DEFAULT '{}',
+            plan TEXT,
+            plan_expiry REAL NOT NULL DEFAULT 0,
+            bot_limit INTEGER NOT NULL DEFAULT 2,
+            max_upload_mb INTEGER NOT NULL DEFAULT 10,
+            banned INTEGER NOT NULL DEFAULT 0,
+            reminded INTEGER NOT NULL DEFAULT 0,
+            last_seen REAL NOT NULL DEFAULT 0
+        );
+        CREATE TABLE IF NOT EXISTS plans(
+            id INTEGER PRIMARY KEY,
+            name TEXT NOT NULL,
+            price INTEGER NOT NULL,
+            duration_days INTEGER NOT NULL,
+            bot_limit INTEGER NOT NULL,
+            description TEXT NOT NULL DEFAULT '',
+            emoji TEXT NOT NULL DEFAULT '💎',
+            active INTEGER NOT NULL DEFAULT 1,
+            max_upload_mb INTEGER NOT NULL DEFAULT 20
+        );
+        CREATE TABLE IF NOT EXISTS orders(
+            id TEXT PRIMARY KEY,
+            user_id INTEGER NOT NULL,
+            plan_id INTEGER,
+            plan_snapshot TEXT NOT NULL,
+            amount INTEGER NOT NULL,
+            utr TEXT UNIQUE,
+            screenshot_file_id TEXT,
+            screenshot_kind TEXT,
+            status TEXT NOT NULL DEFAULT 'pending',
+            stage TEXT NOT NULL DEFAULT 'qr',
+            reason TEXT,
+            created_at REAL NOT NULL,
+            expires_at REAL NOT NULL,
+            processed_by INTEGER,
+            processed_at REAL
+        );
+        CREATE UNIQUE INDEX IF NOT EXISTS one_pending_order
+            ON orders(user_id) WHERE status='pending';
+        CREATE TABLE IF NOT EXISTS order_messages(
+            order_id TEXT,
+            chat_id INTEGER,
+            message_id INTEGER,
+            PRIMARY KEY(order_id, chat_id, message_id)
+        );
+        CREATE TABLE IF NOT EXISTS tickets(
+            id INTEGER PRIMARY KEY,
+            user_id INTEGER,
+            message TEXT,
+            reply TEXT,
+            created_at REAL,
+            replied_by INTEGER
+        );
+        """)
+        additions = {
+            "users": {
+                "last_seen": "REAL NOT NULL DEFAULT 0",
+                "reminded": "INTEGER NOT NULL DEFAULT 0"
+            },
+            "plans": {
+                "max_upload_mb": "INTEGER NOT NULL DEFAULT 20"
+            }
+        }
+        for table, columns in additions.items():
+            have = {r[1] for r in con.execute("PRAGMA table_info(" + table + ")")}
+            for name, spec in columns.items():
+                if name not in have:
+                    con.execute("ALTER TABLE " + table + " ADD COLUMN " + name + " " + spec)
+
+        defaults = {
+            "upi_id": "",
+            "payee_name": "DK Hosting Bot",
+            "subscription_on": "1",
+            "free_limit": os.getenv("FREE_BOT_LIMIT", "2"),
+            "free_upload_mb": "10",
+            "info_text": (
+                "More file slots, automatic crash recovery, private logs and priority support."
+            ),
+            "support": os.getenv("SUPPORT_CONTACT", "Contact the bot owner via Support"),
+            "maintenance": "0",
+            "maintenance_text": "Uploads are temporarily paused for maintenance.",
+            "force_join": ""
+        }
+        for key, value in defaults.items():
+            con.execute("INSERT OR IGNORE INTO settings VALUES (?,?)", (key, value))
+
+        if not con.execute("SELECT 1 FROM settings WHERE key=?", ("legacy_imported",)).fetchone():
+            for uid, data in users.items():
+                con.execute(
+                    "INSERT OR IGNORE INTO users(id,legacy_json,bot_limit,banned) VALUES (?,?,?,?)",
+                    (
+                        uid,
+                        json.dumps(data, ensure_ascii=False),
+                        int(defaults["free_limit"]),
+                        int(data.get("rejected", False))
+                    )
+                )
+            con.execute("INSERT INTO settings VALUES ('legacy_imported','1')")
+
+        if not con.execute("SELECT 1 FROM settings WHERE key='default_plans_seeded'").fetchone():
+            if not con.execute("SELECT 1 FROM plans").fetchone():
+                con.executemany(
+                    "INSERT INTO plans(name,price,duration_days,bot_limit,description,emoji,active,max_upload_mb) "
+                    "VALUES (?,?,?,?,?,?,1,20)",
+                    DEFAULT_PLANS
+                )
+            con.execute("INSERT INTO settings VALUES ('default_plans_seeded','1')")
+        con.execute("PRAGMA user_version=1")
+
+
+init_premium_db()
+
+
+# Keep JSON file AND SQLite in sync so legacy functions work 100% natively
+_orig_save_data = save_data
+_orig_load_data = load_data
+
+
+@locked
+def load_data():
+    _orig_load_data()
+    try:
+        for row in rows("SELECT id, legacy_json, banned FROM users"):
+            uid = row["id"]
+            try:
+                db_val = json.loads(row["legacy_json"] or "{}")
+            except Exception:
+                db_val = {}
+            if uid not in users:
+                db_val.setdefault("files", [])
+                db_val.setdefault("env_vars", {})
+                db_val.setdefault("approved", uid == OWNER_ID)
+                db_val.setdefault("rejected", bool(row["banned"]))
+                users[uid] = db_val
+            else:
+                for f in db_val.get("files", []):
+                    if f not in users[uid].setdefault("files", []):
+                        users[uid]["files"].append(f)
+                for k, v in db_val.get("env_vars", {}).items():
+                    users[uid].setdefault("env_vars", {}).setdefault(k, {}).update(v)
+    except Exception as e:
+        LOG.warning("SQLite load merge error: %s", e)
+
+
+@locked
+def save_data():
+    _orig_save_data()
+    try:
+        with database(True) as con:
+            free_lim = int(setting("free_limit", "2"))
+            for uid, value in users.items():
+                con.execute(
+                    "INSERT INTO users(id,legacy_json,bot_limit,banned) VALUES (?,?,?,?) "
+                    "ON CONFLICT(id) DO UPDATE SET legacy_json=excluded.legacy_json, banned=excluded.banned",
+                    (
+                        uid,
+                        json.dumps(value, ensure_ascii=False),
+                        free_lim,
+                        int(value.get("rejected", False))
+                    )
+                )
+    except Exception as e:
+        LOG.warning("SQLite save sync error: %s", e)
+
+
+load_data()
+
+
+def premium_user(uid):
+    ensure_user(uid)
+    res = rows("SELECT * FROM users WHERE id=?", (uid,))
+    if not res:
+        save_data()
+        res = rows("SELECT * FROM users WHERE id=?", (uid,))
+    return res[0]
+
+
+def active_plan(uid):
+    u = premium_user(uid)
+    return bool(u["plan"] and u["plan_expiry"] > time.time())
+
+
+def is_premium(uid):
+    return bool(uid) and active_plan(uid)
+
+
+def bot_limit(uid):
+    if uid == OWNER_ID:
+        return 10000
+    u = premium_user(uid)
+    if active_plan(uid):
+        return max(int(u["bot_limit"]), int(users.get(uid, {}).get("max_files", 2)))
+    # Fall back to owner-set max_files or default free_limit
+    ensure_user(uid)
+    custom = users[uid].get("max_files", users[uid].get("file_limit", None))
+    if custom is not None:
+        try:
+            c_int = int(custom)
+            if c_int < 0:
+                return 10000
+            return c_int
+        except Exception:
+            pass
+    return int(setting("free_limit", "2"))
+
+
+# Override get_file_limit so document_handler automatically respects Premium plan slots
+def get_file_limit(uid):
+    """None = unlimited, otherwise the max number of files."""
+    if uid == OWNER_ID:
+        return None
+    ensure_user(uid)
+    raw = users[uid].get("max_files", users[uid].get("file_limit", None))
+    if raw is not None:
+        try:
+            if int(raw) < 0:
+                return None
+        except Exception:
+            pass
+    if active_plan(uid):
+        u = premium_user(uid)
+        base_lim = int(u["bot_limit"])
+        if raw is not None:
+            try:
+                return max(base_lim, int(raw))
+            except Exception:
+                pass
+        return base_lim
+    if raw is not None:
+        try:
+            return int(raw)
+        except Exception:
+            pass
+    return int(setting("free_limit", "2"))
+
+
+def upload_limit(uid):
+    u = premium_user(uid)
+    mb = u["max_upload_mb"] if active_plan(uid) else int(setting("free_upload_mb", "10"))
+    return min(50, max(5, int(mb))) * 1024 ** 2
+
+
+def money(paise):
+    return format(Decimal(paise) / 100, ".2f")
+
+
+def stamp(ts):
+    return (
+        datetime.fromtimestamp(ts, timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
+        if ts else "Not active"
+    )
+
+
+def telegram(method, *args, **kwargs):
+    for attempt in range(3):
+        try:
+            return method(*args, **kwargs)
+        except Exception as exc:
+            code = getattr(exc, "error_code", 0)
+            if code == 429:
+                wait = (
+                    getattr(exc, "result_json", {})
+                    .get("parameters", {})
+                    .get("retry_after", 2)
+                )
+                if wait > 30 or STOP_EVENT.wait(wait):
+                    raise
+                continue
+            text = str(exc).lower()
+            if "message is not modified" in text:
+                return None
+            if code in (400, 401, 403, 409) or attempt == 2:
+                raise
+            if STOP_EVENT.wait(2 ** attempt):
+                raise
+    raise RuntimeError("Telegram request was not completed")
+
+
+def say(chat, text, markup=None):
+    return telegram(bot.send_message, chat, text, parse_mode="HTML", reply_markup=markup)
+
+
+def notify(chat, text, markup=None):
+    try:
+        return say(chat, text, markup)
+    except Exception:
+        LOG.exception("Notification failed for chat %s", chat)
+
+
+def keyboard(*items, back="s:home", columns=2):
+    buttons = [InlineKeyboardButton(label, callback_data=data) for label, data in items]
+    layout = [buttons[i:i + columns] for i in range(0, len(buttons), columns)]
+    if back:
+        nav = [InlineKeyboardButton("⬅ Back", callback_data=back)]
+        if back != "s:home":
+            nav.append(InlineKeyboardButton("🏠 Main Menu", callback_data="s:home"))
+        layout.append(nav)
+    return InlineKeyboardMarkup(layout)
+
+
+def screen(call, text, markup):
+    try:
+        if getattr(call.message, "photo", None) or getattr(call.message, "document", None):
+            return say(call.message.chat.id, text, markup)
+        return telegram(
+            bot.edit_message_text,
+            text,
+            chat_id=call.message.chat.id,
+            message_id=call.message.message_id,
+            parse_mode="HTML",
+            reply_markup=markup
+        )
+    except Exception as exc:
+        if getattr(exc, "error_code", 0) == 400:
+            return say(call.message.chat.id, text, markup)
+        raise
+
+
+# Extend MENU_PREFIXES so clicking any main menu button clears pending states cleanly
+MENU_PREFIXES = (
+    "🌏", "📁", "🔄", "⏹", "⚡", "🚀", "⚙", "👑", "🆘", "📊", "💎"
+)
+
+_old_control_buttons = control_buttons
+
+
+def control_buttons(uid=None):
+    k = _old_control_buttons(uid)
+    k.row(
+        KeyboardButton("🆘 Support"),
+        KeyboardButton("📊 My Subscription")
+    )
+    if is_premium(uid):
+        k.row(KeyboardButton("👑 Premium Active"))
+    else:
+        k.row(KeyboardButton("💎 Subscription"))
+    return k
+
+
+def notify_menu(chat, text):
+    try:
+        return say(chat, text, control_buttons(chat))
+    except Exception:
+        LOG.exception("Menu notification failed for chat %s", chat)
+
+
+def running_count(uid):
+    return len(active_scripts.get(uid, {}))
+
+
+def enforce_limit(uid):
+    lim = get_file_limit(uid)
+    if premium_user(uid)["banned"] or users.get(uid, {}).get("rejected", False):
+        lim = 0
+    if lim is None:
+        return
+    procs = list(active_scripts.get(uid, {}).keys())
+    if len(procs) > lim:
+        for p in procs[lim:]:
+            stop_script(uid, p)
+        notify(
+            uid,
+            (
+                f"{pe(PE_WARNING, '⚠️')} <b>Limit Updated:</b> "
+                f"Your simultaneous script limit is now <b>{lim}</b>. "
+                f"Extra running scripts were stopped; your files were kept."
+            )
+        )
+
+
+def premium_status_text(uid):
+    u = premium_user(uid)
+    running = running_count(uid)
+    left = max(0, int((u["plan_expiry"] - time.time()) / 86400))
+    return (
+        f"{pe(PE_CROWN, '👑')} <b>PREMIUM MEMBERSHIP ACTIVE</b>\n\n"
+        f"{pe(PE_STAR, '⭐')} <b>Plan:</b> {safe_html(u['plan'])}\n"
+        f"{pe(PE_WARNING, '⏳')} <b>Expires:</b> {stamp(u['plan_expiry'])}\n"
+        f"{pe(PE_CHECK, '✅')} <b>Days Remaining:</b> {left}\n"
+        f"{pe(PE_SERVER, '🟢')} <b>Running Scripts:</b> {running} / {limit_label(uid)}\n"
+        f"{pe(PE_FOLDER, '📁')} <b>Max Upload Size:</b> {upload_limit(uid) // 1024 ** 2} MB\n\n"
+        f"{pe(PE_ROCKET, '🚀')} Enjoy priority support, extra file slots, and auto-recovery!"
+    )
+
+
+_old_owner_markup = owner_markup
+
+
+def owner_markup():
+    k = _old_owner_markup()
+    k.row(InlineKeyboardButton("💎 Subscription Manager", callback_data="s:manager"))
+    return k
+
+
+def set_state(uid, mode, **data):
+    with UI_LOCK:
+        UI_STATE[uid] = dict(mode=mode, at=time.time(), **data)
+
+
+def clear_state(uid):
+    with UI_LOCK:
+        UI_STATE.pop(uid, None)
+    env_waiting_users.pop(uid, None)
+    install_waiting_users.pop(uid, None)
+    owner_waiting.pop(uid, None)
+
+
+def plans_list():
+    return rows("SELECT * FROM plans WHERE active=1 ORDER BY price,id")
+
+
+def subscription_text(uid):
+    lines = [
+        f"{pe(PE_DIAMOND, '💎')} <b>PREMIUM HOSTING PLANS</b>",
+        "",
+        f"{pe(PE_ROCKET, '🚀')} <b>Upgrade your hosting power!</b>",
+        f"<i>{safe_html(setting('info_text'))}</i>",
+        "",
+        f"{pe(PE_USER, '👤')} <b>FREE PLAN</b>",
+        f"• {pe(PE_FOLDER, '📁')} <b>File Limit:</b> {safe_html(setting('free_limit'))} files",
+        f"• {pe(PE_UPLOAD, '📥')} <b>Upload Size:</b> {safe_html(setting('free_upload_mb'))} MB",
+        "",
+        f"{pe(PE_CROWN, '👑')} <b>PREMIUM PLANS</b>"
+    ]
+    for p in plans_list():
+        lines += [
+            f"{pe(PE_DIAMOND, '💎')} <b>{safe_html(p['name'])}</b>",
+            f"• {pe(PE_MONEY, '💰')} <b>Price:</b> ₹{money(p['price'])}",
+            f"• {pe(PE_WARNING, '⏳')} <b>Validity:</b> {p['duration_days']} days",
+            f"• {pe(PE_BOT, '🤖')} <b>File Limit:</b> {p['bot_limit']} files  |  <b>Upload:</b> {min(50, p['max_upload_mb'])} MB",
+            f"  <i>{safe_html(p['description'])}</i>",
+            ""
+        ]
+    lines += [
+        f"{pe(PE_FIRE, '🔥')} <b>PREMIUM BENEFITS</b>",
+        f"• {pe(PE_CHECK, '✅')} Higher file &amp; script hosting limits",
+        f"• {pe(PE_CHECK, '✅')} Live logs &amp; one-click .env configuration",
+        f"• {pe(PE_CHECK, '✅')} Priority owner support",
+        "",
+        f"{pe(PE_SHIELD, '🛡')} <b>PAYMENT RULES</b>",
+        f"• {pe(PE_LOCK, '🔐')} Plan activates after manual UTR &amp; screenshot verification",
+        f"• {pe(PE_WARNING, '⚠️')} Fake or edited payment proof will result in an account ban",
+        f"• {pe(PE_STAR, '⭐')} Typical approval time: 5 to 10 minutes",
+        "",
+        f"{pe(PE_PHONE, '🆔')} <b>Support:</b> {safe_html(setting('support'))}",
+        "",
+        f"Tap <b>✅ I Agree</b> below to choose a plan."
+    ]
+    return "\n".join(lines)
+
+
+def show_subscription(uid, call=None):
+    if is_premium(uid):
+        card = keyboard(("📊 My Subscription", "s:mine"), back=None)
+        return (
+            screen(call, premium_status_text(uid), card)
+            if call else say(uid, premium_status_text(uid), card)
+        )
+    text = subscription_text(uid)
+    markup = keyboard(("✅ I Agree", "s:plans"), ("📊 My Subscription", "s:mine"))
+    chunks = []
+    current = ""
+    for line in text.splitlines(keepends=True):
+        if current and len(current) + len(line) > 3600:
+            chunks.append(current)
+            current = ""
+        current += line
+    if current:
+        chunks.append(current)
+    for index, chunk in enumerate(chunks):
+        buttons = markup if index == len(chunks) - 1 else None
+        if call and index == 0:
+            screen(call, chunk, buttons)
+        else:
+            say(uid, chunk, buttons)
+
+
+def select_plan(call):
+    plans = plans_list()
+    if not plans:
+        screen(
+            call,
+            f"{pe(PE_WARNING, '⚠️')} <b>No plans are available right now.</b>\nPlease check back soon.",
+            keyboard(back="s:info")
+        )
+        return
+    text = f"{pe(PE_DIAMOND, '💎')} <b>CHOOSE YOUR PLAN</b>\n\n"
+    for p in plans:
+        text += (
+            f"{pe(PE_CROWN, '👑')} <b>{safe_html(p['name'])}</b>\n"
+            f"• {pe(PE_MONEY, '💰')} <b>₹{money(p['price'])}</b>  •  {p['duration_days']} days\n"
+            f"• {pe(PE_FOLDER, '📁')} {p['bot_limit']} files  •  {min(50, p['max_upload_mb'])} MB\n"
+            f"  <i>{safe_html(p['description'])}</i>\n\n"
+        )
+    text += f"{pe(PE_STAR, '⭐')} Select a plan below to proceed:"
+    items = [
+        (f"{p['emoji']} {p['name']} • ₹{money(p['price'])}", f"s:plan:{p['id']}")
+        for p in plans
+    ]
+    screen(call, text, keyboard(*items, back="s:info"))
+
+
+def my_subscription(uid):
+    u = premium_user(uid)
+    running = running_count(uid)
+    total_files = len(users.get(uid, {}).get("files", []))
+    history = rows(
+        "SELECT id,status,amount FROM orders WHERE user_id=? ORDER BY created_at DESC LIMIT 5",
+        (uid,)
+    )
+    icons = {
+        "approved": "✅",
+        "pending": "⏳",
+        "rejected": "❌",
+        "cancelled": "🚫",
+        "expired": "⌛"
+    }
+    text = f"{pe(PE_DIAMOND, '📊')} <b>MY SUBSCRIPTION</b>\n\n"
+    if is_premium(uid):
+        left = max(0, int((u["plan_expiry"] - time.time()) / 86400))
+        text += (
+            f"{pe(PE_CROWN, '👑')} <b>Status:</b> PREMIUM ACTIVE\n"
+            f"{pe(PE_STAR, '⭐')} <b>Plan:</b> {safe_html(u['plan'])}\n"
+            f"{pe(PE_WARNING, '⏳')} <b>Expires:</b> {stamp(u['plan_expiry'])}\n"
+            f"{pe(PE_CHECK, '✅')} <b>Days Left:</b> {left}\n"
+        )
+    else:
+        text += (
+            f"{pe(PE_USER, '👤')} <b>Status:</b> FREE PLAN\n"
+            f"{pe(PE_STAR, '⭐')} Upgrade to Premium for higher file limits &amp; priority support.\n"
+        )
+    text += (
+        f"{pe(PE_FOLDER, '📁')} <b>Files Uploaded:</b> {total_files} / {limit_label(uid)}\n"
+        f"{pe(PE_SERVER, '🟢')} <b>Running Scripts:</b> {running}\n\n"
+        f"{pe(PE_UPLOAD, '📜')} <b>RECENT ORDERS</b>\n"
+    )
+    text += (
+        "\n".join(
+            f"{icons.get(o['status'], '•')} <code>{o['id']}</code> • {o['status']} • ₹{money(o['amount'])}"
+            for o in history
+        )
+        or "<i>No orders yet.</i>"
+    )
+    return text
+
+
+def create_order(uid, pid):
+    with database(True) as con:
+        con.execute(
+            "UPDATE orders SET status='expired' WHERE status='pending' AND stage!='review' AND expires_at<=?",
+            (time.time(),)
+        )
+        if con.execute("SELECT 1 FROM orders WHERE user_id=? AND status='pending'", (uid,)).fetchone():
+            raise ValueError("You already have a pending order. Use My Subscription or cancel it first.")
+        p = con.execute("SELECT * FROM plans WHERE id=? AND active=1", (pid,)).fetchone()
+        if not p:
+            raise ValueError("This plan is no longer available.")
+        oid = secrets.token_hex(6).upper()
+        now = time.time()
+        con.execute(
+            "INSERT INTO orders(id,user_id,plan_id,plan_snapshot,amount,created_at,expires_at) "
+            "VALUES (?,?,?,?,?,?,?)",
+            (oid, uid, pid, json.dumps(dict(p)), p["price"], now, now + ORDER_TTL)
+        )
+        return oid
+
+
+def get_order(oid, uid=None):
+    result = rows("SELECT * FROM orders WHERE id=?", (oid,))
+    if not result or (uid is not None and result[0]["user_id"] != uid):
+        raise ValueError("Order not found.")
+    o = result[0]
+    if o["status"] == "pending" and o["stage"] != "review" and o["expires_at"] <= time.time():
+        execute(
+            "UPDATE orders SET status='expired' WHERE id=? AND status='pending' AND stage!='review'",
+            (oid,)
+        )
+        o["status"] = "expired"
+    return o
+
+
+def pending_order(uid):
+    data = rows("SELECT id FROM orders WHERE user_id=? AND status='pending'", (uid,))
+    if data:
+        o = get_order(data[0]["id"], uid)
+        return o if o["status"] == "pending" else None
+    return None
+
+
+def qr_payment(call, pid):
+    if setting("subscription_on") != "1":
+        raise ValueError("Subscriptions are temporarily unavailable.")
+    upi = setting("upi_id")
+    if not re.fullmatch(r"[A-Za-z0-9._-]+@[A-Za-z0-9.-]+", upi):
+        raise ValueError("The owner has not configured a valid UPI ID yet.")
+    candidates = rows("SELECT * FROM plans WHERE id=? AND active=1", (pid,))
+    if not candidates:
+        raise ValueError("Plan unavailable.")
+    oid = create_order(call.from_user.id, pid)
+    o = get_order(oid)
+    p = json.loads(o["plan_snapshot"])
+    uri = "upi://pay?" + urlencode({
+        "pa": upi,
+        "pn": setting("payee_name"),
+        "am": money(o["amount"]),
+        "cu": "INR",
+        "tn": "HOST " + oid
+    })
+    caption = (
+        f"{pe(PE_MONEY, '💳')} <b>UPI PAYMENT</b>\n\n"
+        f"{pe(PE_DIAMOND, '💎')} <b>Plan:</b> {safe_html(p['name'])}\n"
+        f"{pe(PE_MONEY, '💰')} <b>Amount:</b> ₹{money(o['amount'])}  ({p['duration_days']} days)\n"
+        f"{pe(PE_LOCK, '🏦')} <b>UPI ID:</b> <code>{safe_html(upi)}</code>\n"
+        f"{pe(PE_PHONE, '🧾')} <b>Order ID:</b> <code>{oid}</code>\n\n"
+        f"{pe(PE_STAR, '📋')} <b>Payment Steps:</b>\n"
+        f"1. Scan the QR code or pay to the UPI ID above\n"
+        f"2. Copy your 12-digit UTR / Transaction ID\n"
+        f"3. Tap <b>📤 I Have Paid</b> and send your UTR\n"
+        f"4. Send your payment screenshot for verification\n\n"
+        f"{pe(PE_WARNING, '⏳')} <b>Expires:</b> {stamp(o['expires_at'])}"
+    )
+    markup = keyboard(
+        ("📤 I Have Paid", f"s:paid:{oid}"),
+        ("❌ Cancel", f"s:cancel:{oid}"),
+        back="s:plans"
+    )
+    try:
+        import qrcode
+        image = qrcode.QRCode(
+            version=None,
+            error_correction=qrcode.constants.ERROR_CORRECT_M,
+            box_size=10,
+            border=4
+        )
+        image.add_data(uri)
+        image.make(fit=True)
+        stream = BytesIO()
+        image.make_image(fill_color="black", back_color="white").save(stream, format="PNG")
+        stream.seek(0)
+        stream.name = "payment.png"
+        telegram(
+            bot.send_photo,
+            call.message.chat.id,
+            stream,
+            caption=caption,
+            parse_mode="HTML",
+            reply_markup=markup
+        )
+    except ImportError:
+        # Fallback if qrcode is not installed on host
+        say(call.message.chat.id, caption, markup)
+    except Exception:
+        execute("UPDATE orders SET status='cancelled',reason='QR delivery failed' WHERE id=? AND stage='qr'", (oid,))
+        raise
+
+
+def receive_utr(uid, text, oid):
+    utr = text.strip().upper()
+    if not re.fullmatch(r"[A-Z0-9]{12,22}", utr):
+        raise ValueError("Send 12 to 22 letters or digits for the UTR / Transaction ID.")
+    with database(True) as con:
+        try:
+            cursor = con.execute(
+                "UPDATE orders SET utr=?,stage='screenshot' "
+                "WHERE id=? AND user_id=? AND status='pending' AND stage='utr' AND expires_at>?",
+                (utr, oid, uid, time.time())
+            )
+            if cursor.rowcount != 1:
+                raise ValueError("This payment step is no longer active.")
+        except sqlite3.IntegrityError:
+            raise ValueError("That UTR has already been used. Contact support if this is a mistake.") from None
+
+
+def send_review(oid):
+    o = get_order(oid)
+    if o["status"] != "pending" or o["stage"] != "review":
+        raise ValueError("This order is not awaiting review.")
+    p = json.loads(o["plan_snapshot"])
+    u = users.get(o["user_id"], {})
+    text = (
+        f"{pe(PE_ADMIN, '👑')} <b>PAYMENT REVIEW</b>\n\n"
+        f"{pe(PE_PHONE, '🧾')} <b>Order:</b> <code>{oid}</code>\n"
+        f"{pe(PE_USER, '👤')} <b>User:</b> {safe_html(u.get('name', 'User'))} (<code>{o['user_id']}</code>)\n"
+        f"{pe(PE_BOT, '🤖')} <b>Username:</b> {safe_html(u.get('username', 'Not supplied'))}\n"
+        f"{pe(PE_DIAMOND, '💎')} <b>Plan:</b> {safe_html(p['name'])}\n"
+        f"{pe(PE_MONEY, '💰')} <b>Amount:</b> ₹{money(o['amount'])} ({p['duration_days']} days)\n"
+        f"{pe(PE_LOCK, '🔑')} <b>UTR:</b> <code>{safe_html(o['utr'])}</code>\n"
+        f"{pe(PE_WARNING, '⏳')} <b>Requested:</b> {stamp(o['created_at'])}"
+    )
+    for admin in ADMIN_IDS:
+        try:
+            method = bot.send_photo if o["screenshot_kind"] == "photo" else bot.send_document
+            msg = telegram(
+                method,
+                admin,
+                o["screenshot_file_id"],
+                caption=text,
+                parse_mode="HTML",
+                reply_markup=keyboard(
+                    ("✅ APPROVE", f"s:approve:{oid}"),
+                    ("❌ REJECT", f"s:reject:{oid}"),
+                    back=None
+                )
+            )
+            execute("INSERT OR IGNORE INTO order_messages VALUES (?,?,?)", (oid, admin, msg.message_id))
+        except Exception:
+            LOG.exception("Review delivery failed; order remains accessible in manager")
+
+
+def process_order(oid, admin, approve, reason="Not verified"):
+    if admin not in ADMIN_IDS:
+        raise ValueError("Admin access required.")
+    with STATE_LOCK:
+        with database(True) as con:
+            row = con.execute("SELECT * FROM orders WHERE id=?", (oid,)).fetchone()
+            if not row or row["status"] != "pending" or row["stage"] != "review":
+                raise ValueError("This order was already processed or has no proof.")
+            o = dict(row)
+            p = json.loads(o["plan_snapshot"])
+            now = time.time()
+            status = "approved" if approve else "rejected"
+            if approve:
+                u = con.execute("SELECT * FROM users WHERE id=?", (o["user_id"],)).fetchone()
+                if not u or u["banned"]:
+                    raise ValueError("The user is banned or missing. Resolve their account first.")
+                expiry = max(now, u["plan_expiry"]) + p["duration_days"] * 86400
+                con.execute(
+                    "UPDATE users SET plan=?,plan_expiry=?,bot_limit=?,max_upload_mb=?,reminded=0 WHERE id=?",
+                    (p["name"], expiry, p["bot_limit"], p["max_upload_mb"], o["user_id"])
+                )
+                ensure_user(o["user_id"])
+                users[o["user_id"]]["approved"] = True
+                users[o["user_id"]]["rejected"] = False
+                users[o["user_id"]]["max_files"] = max(
+                    int(p["bot_limit"]),
+                    int(users[o["user_id"]].get("max_files", 2))
+                )
+            con.execute(
+                "UPDATE orders SET status=?,reason=?,processed_by=?,processed_at=? WHERE id=?",
+                (status, reason[:500], admin, now, oid)
+            )
+        save_data()
+    if approve:
+        notify_menu(
+            o["user_id"],
+            (
+                f"{pe(PE_GIFT, '🎁')} <b>SUBSCRIPTION ACTIVATED!</b>\n\n"
+                f"{pe(PE_CROWN, '👑')} You are now a <b>Premium Member</b>!\n"
+                f"{pe(PE_STAR, '⭐')} <b>Plan:</b> {safe_html(p['name'])}\n"
+                f"{pe(PE_FOLDER, '📁')} <b>File Limit:</b> {p['bot_limit']} files\n"
+                f"{pe(PE_WARNING, '⏳')} <b>Expires:</b> {stamp(expiry)}"
+            )
+        )
+    else:
+        notify_menu(
+            o["user_id"],
+            (
+                f"{pe(PE_CROSS, '❌')} <b>PAYMENT REJECTED</b>\n\n"
+                f"{pe(PE_WARNING, '⚠️')} <b>Reason:</b> {safe_html(reason)}\n"
+                f"{pe(PE_PHONE, '🆘')} <b>Support:</b> {safe_html(setting('support'))}"
+            )
+        )
+    for m in rows("SELECT * FROM order_messages WHERE order_id=?", (oid,)):
+        try:
+            telegram(
+                bot.edit_message_caption,
+                chat_id=m["chat_id"],
+                message_id=m["message_id"],
+                caption=(
+                    f"{pe(PE_CHECK if approve else PE_CROSS, '✅' if approve else '❌')} "
+                    f"<b>Order {status.upper()}</b> by <code>{admin}</code>\n"
+                    f"Order: <code>{oid}</code>\n"
+                    f"{safe_html(reason[:300])}"
+                ),
+                parse_mode="HTML",
+                reply_markup=None
+            )
+        except Exception:
+            LOG.exception("Could not update review message")
+    return status
+
+
+# ============================================================
+# SUBSCRIPTION MANAGER (OWNER PANEL EXTENSION)
+# ============================================================
+
+def manager(call):
+    items = [
+        ("💳 UPI ID Settings", "s:upi"),
+        ("💎 Manage Plans", "s:manageplans"),
+        ("⏳ Pending Orders", "s:orders:pending"),
+        ("✅ Approved Orders", "s:orders:approved"),
+        ("❌ Rejected Orders", "s:orders:rejected"),
+        ("📈 Revenue Stats", "s:revenue"),
+        ("🎁 Give / Remove Sub", "s:gift"),
+        ("📢 Targeted Broadcast", "s:broadcast"),
+        ("🚫 Ban / Unban", "s:ban"),
+        ("📋 Ban List", "s:banlist"),
+        ("💾 Database Backup", "s:backup"),
+        ("⚙️ Service Settings", "s:settings")
+    ]
+    screen(
+        call,
+        (
+            f"{pe(PE_DIAMOND, '💎')} <b>SUBSCRIPTION MANAGER</b>\n\n"
+            f"{pe(PE_STAR, '⭐')} Manage UPI settings, subscription plans, orders, and user access below."
+        ),
+        keyboard(*items, back="owner_home")
+    )
+
+
+def plan_form(call, pid=0):
+    data = {
+        "name": "WEEKLY",
+        "price": "49.00",
+        "duration_days": 7,
+        "bot_limit": 5,
+        "description": "Priority support",
+        "emoji": "💎",
+        "active": 1,
+        "max_upload_mb": 20
+    }
+    if pid:
+        found = rows("SELECT * FROM plans WHERE id=?", (pid,))
+        if not found:
+            raise ValueError("Plan not found.")
+        data = found[0]
+        data.pop("id")
+        data["price"] = money(data["price"])
+    set_state(call.from_user.id, "plan_edit", pid=pid)
+    screen(
+        call,
+        (
+            f"{pe(PE_SETTINGS, '⚙️')} <b>ADVANCED PLAN JSON EDITOR</b>\n\n"
+            f"Send a JSON object to save the plan:\n"
+            f"<pre>{safe_html(json.dumps(data, ensure_ascii=False, indent=2))}</pre>"
+        ),
+        keyboard(back="s:manageplans")
+    )
+
+
+def validate_plan(data):
+    required = {
+        "name", "price", "duration_days", "bot_limit",
+        "description", "emoji", "active", "max_upload_mb"
+    }
+    if set(data) != required:
+        raise ValueError("Use exactly the fields in the displayed template.")
+    try:
+        amount = Decimal(str(data["price"]))
+        if not amount.is_finite() or amount <= 0 or amount > 1000000 or amount * 100 != (amount * 100).to_integral_value():
+            raise ValueError("Price must be positive with no more than 2 decimal places.")
+        data["price"] = int(amount * 100)
+    except InvalidOperation:
+        raise ValueError("Invalid price.") from None
+    for key, low, high in [
+        ("duration_days", 1, 3650),
+        ("bot_limit", 1, 1000),
+        ("max_upload_mb", 1, 50),
+        ("active", 0, 1)
+    ]:
+        if isinstance(data[key], bool) or int(data[key]) != float(data[key]) or not low <= int(data[key]) <= high:
+            raise ValueError("Invalid " + key)
+        data[key] = int(data[key])
+    for key, limit in [("name", 60), ("description", 250), ("emoji", 12)]:
+        data[key] = str(data[key]).strip()
+        if not data[key] or len(data[key]) > limit:
+            raise ValueError(f"{key} must contain 1 to {limit} characters.")
+    return data
+
+
+def revenue_text():
+    now = datetime.now(timezone.utc)
+    day = calendar.timegm(now.replace(hour=0, minute=0, second=0, microsecond=0).timetuple())
+    week = day - now.weekday() * 86400
+    month = calendar.timegm(now.replace(day=1, hour=0, minute=0, second=0, microsecond=0).timetuple())
+    text = f"{pe(PE_GIFT, '📈')} <b>REVENUE &amp; SUBSCRIPTION STATS</b>\n\n"
+    for label, start in [("Today", day), ("This Week", week), ("This Month", month), ("Total", 0)]:
+        amount = rows(
+            "SELECT COALESCE(SUM(amount),0) AS n FROM orders WHERE status='approved' AND processed_at>=?",
+            (start,)
+        )[0]["n"]
+        text += f"• <b>{label}:</b> ₹{money(amount)}\n"
+    count = rows(
+        "SELECT COUNT(*) n FROM users WHERE plan IS NOT NULL AND plan_expiry>? AND banned=0",
+        (time.time(),)
+    )[0]["n"]
+    text += (
+        f"\n{pe(PE_CROWN, '👑')} <b>Active Subscribers:</b> {count}\n"
+        f"{pe(PE_FIRE, '⚙️')} <b>CPU Usage:</b> {psutil.cpu_percent()}%\n"
+        f"{pe(PE_DIAMOND, '💾')} <b>RAM Usage:</b> {psutil.virtual_memory().percent}%"
+    )
+    return text
+
+
+def plan_row(pid):
+    found = rows("SELECT * FROM plans WHERE id=?", (pid,))
+    if not found:
+        raise ValueError("Plan not found.")
+    return found[0]
+
+
+def parse_price_paise(text):
+    try:
+        amount = Decimal(text.replace("₹", "").replace(",", "").strip())
+    except InvalidOperation:
+        raise ValueError("Send the price as a number, for example 49.") from None
+    if not amount.is_finite() or amount <= 0 or amount > 1000000 or amount * 100 != (amount * 100).to_integral_value():
+        raise ValueError("Price must be positive with at most 2 decimal places.")
+    return int(amount * 100)
+
+
+def parse_days(text):
+    text = text.strip()
+    if not text.isdigit() or not 1 <= int(text) <= 3650:
+        raise ValueError("Send a whole number of days between 1 and 3650.")
+    return int(text)
+
+
+def give_confirm(uid, target, days):
+    u = premium_user(target)
+    now = time.time()
+    current = (
+        f"{u['plan']} until {stamp(u['plan_expiry'])}"
+        if u["plan"] and u["plan_expiry"] > now
+        else "No active subscription"
+    )
+    set_state(uid, "give_confirm", target=target, days=days)
+    say(
+        uid,
+        (
+            f"{pe(PE_GIFT, '🎁')} <b>CONFIRM SUBSCRIPTION GIFT</b>\n\n"
+            f"{pe(PE_USER, '👤')} <b>User ID:</b> <code>{target}</code>\n"
+            f"{pe(PE_STAR, '⭐')} <b>Current:</b> {safe_html(current)}\n"
+            f"{pe(PE_CHECK, '✅')} <b>Add Duration:</b> {days} days"
+        ),
+        keyboard(("✅ Confirm", "s:gconfirm"), ("❌ Cancel", "s:gift"), back=None)
+    )
+
+
+def handle_admin_input(message, state):
+    uid = message.from_user.id
+    mode = state["mode"]
+    text = (message.text or "").strip()
+    if mode == "reject":
+        process_order(state["oid"], uid, False, "Not verified" if text == "/skip" else text[:500])
+    elif mode == "ticket_reply":
+        ticket = rows("SELECT * FROM tickets WHERE id=?", (state["ticket"],))
+        if not ticket:
+            raise ValueError("Ticket missing.")
+        execute(
+            "UPDATE tickets SET reply=?,replied_by=? WHERE id=?",
+            (text[:3500], uid, state["ticket"])
+        )
+        notify(
+            ticket[0]["user_id"],
+            f"{pe(PE_ADMIN, '👑')} <b>SUPPORT REPLY</b>\n\n{safe_html(text[:3500])}"
+        )
+    else:
+        if uid != OWNER_ID:
+            raise ValueError("Owner access required.")
+        if mode == "plan_edit":
+            data = validate_plan(json.loads(text))
+            columns = list(data)
+            if state["pid"]:
+                execute(
+                    "UPDATE plans SET " + ",".join(k + "=?" for k in columns) + " WHERE id=?",
+                    tuple(data.values()) + (state["pid"],)
+                )
+            else:
+                if rows("SELECT COUNT(*) n FROM plans WHERE active=1")[0]["n"] >= 10:
+                    raise ValueError("Keep at most 10 active plans.")
+                execute(
+                    "INSERT INTO plans(" + ",".join(columns) + ") VALUES (" + ",".join("?" for _ in columns) + ")",
+                    tuple(data.values())
+                )
+        elif mode == "upi":
+            value = text.strip()
+            if not UPI_RE.fullmatch(value):
+                raise ValueError("Invalid UPI ID. Use format name@bank (e.g. yourname@upi). Send /cancel to stop.")
+            set_setting("upi_id", value)
+            clear_state(uid)
+            say(
+                uid,
+                (
+                    f"{pe(PE_CHECK, '✅')} <b>UPI ID Updated Successfully!</b>\n\n"
+                    f"New UPI ID: <code>{safe_html(value)}</code>"
+                ),
+                keyboard(back="s:upi")
+            )
+            return
+        elif mode == "np_name":
+            name = text.strip()
+            if not 1 <= len(name) <= 60:
+                raise ValueError("Plan name must be 1 to 60 characters.")
+            set_state(uid, "np_price", name=name)
+            say(
+                uid,
+                f"{pe(PE_MONEY, '💰')} <b>Enter Plan Price in INR</b>\nExample: <code>49</code>",
+                keyboard(("❌ Cancel", "s:manageplans"), back=None)
+            )
+            return
+        elif mode in ("np_price", "ep_price"):
+            price = parse_price_paise(text)
+            if mode == "ep_price":
+                plan_row(state["pid"])
+                execute("UPDATE plans SET price=? WHERE id=?", (price, state["pid"]))
+                clear_state(uid)
+                say(
+                    uid,
+                    f"{pe(PE_CHECK, '✅')} <b>Price updated to ₹{money(price)}.</b>",
+                    keyboard(back=f"s:editplan:{state['pid']}")
+                )
+                return
+            set_state(uid, "np_days", name=state["name"], price=price)
+            say(
+                uid,
+                f"{pe(PE_WARNING, '⏳')} <b>Enter Plan Duration in Days</b>\nExample: <code>7</code>",
+                keyboard(("❌ Cancel", "s:manageplans"), back=None)
+            )
+            return
+        elif mode in ("np_days", "ep_days"):
+            days = parse_days(text)
+            if mode == "ep_days":
+                plan_row(state["pid"])
+                execute("UPDATE plans SET duration_days=? WHERE id=?", (days, state["pid"]))
+                clear_state(uid)
+                say(
+                    uid,
+                    f"{pe(PE_CHECK, '✅')} <b>Duration updated to {days} days.</b>",
+                    keyboard(back=f"s:editplan:{state['pid']}")
+                )
+                return
+            set_state(uid, "plan_confirm", plan={"name": state["name"], "price": state["price"], "days": days})
+            say(
+                uid,
+                (
+                    f"{pe(PE_DIAMOND, '💎')} <b>PLAN PREVIEW</b>\n\n"
+                    f"• <b>Plan:</b> {safe_html(state['name'])}\n"
+                    f"• <b>Price:</b> ₹{money(state['price'])}\n"
+                    f"• <b>Duration:</b> {days} Days\n\n"
+                    f"Save this plan?"
+                ),
+                keyboard(
+                    ("✅ Save Plan", "s:plan_save"),
+                    ("✏️ Edit", "s:plan_edit_again"),
+                    ("❌ Cancel", "s:manageplans"),
+                    back=None
+                )
+            )
+            return
+        elif mode == "give_uid":
+            target = int(text)
+            if target <= 0:
+                raise ValueError("Send a valid numeric Telegram User ID.")
+            ensure_user(target)
+            set_state(uid, "give_pick", target=target)
+            say(
+                uid,
+                f"{pe(PE_GIFT, '🎁')} <b>Choose duration</b> for <code>{target}</code>:",
+                keyboard(
+                    ("7 Days", "s:gd:7"),
+                    ("30 Days", "s:gd:30"),
+                    ("90 Days", "s:gd:90"),
+                    ("Custom Days", "s:gd:c"),
+                    ("❌ Cancel", "s:gift"),
+                    back=None
+                )
+            )
+            return
+        elif mode == "give_days":
+            give_confirm(uid, state["target"], parse_days(text))
+            return
+        elif mode == "rem_uid":
+            target = int(text)
+            if target <= 0:
+                raise ValueError("Send a valid numeric Telegram User ID.")
+            u = premium_user(target)
+            now = time.time()
+            status = (
+                f"{u['plan']} until {stamp(u['plan_expiry'])}"
+                if u["plan"] and u["plan_expiry"] > now
+                else "No active subscription"
+            )
+            set_state(uid, "rem_confirm", target=target)
+            say(
+                uid,
+                (
+                    f"{pe(PE_WARNING, '⚠️')} <b>Remove subscription?</b>\n\n"
+                    f"User: <code>{target}</code>\n"
+                    f"Status: {safe_html(status)}"
+                ),
+                keyboard(("🗑 Confirm Remove", "s:gremove"), ("❌ Cancel", "s:gift"), back=None)
+            )
+            return
+        elif mode == "settings":
+            values = json.loads(text)
+            allowed = {
+                "upi_id", "payee_name", "subscription_on", "free_limit",
+                "free_upload_mb", "info_text", "support", "maintenance",
+                "maintenance_text", "force_join"
+            }
+            if not values or not set(values) <= allowed:
+                raise ValueError("Unknown or empty settings fields.")
+            for key, value in values.items():
+                value = str(value)
+                if key in ("subscription_on", "maintenance") and value not in ("0", "1"):
+                    raise ValueError("Use 0 or 1 for " + key)
+                if key in ("free_limit", "free_upload_mb"):
+                    if not value.isdigit() or not 1 <= int(value) <= (50 if key == "free_upload_mb" else 1000):
+                        raise ValueError("Invalid " + key)
+                if key == "upi_id" and value and not re.fullmatch(r"[A-Za-z0-9._-]+@[A-Za-z0-9.-]+", value):
+                    raise ValueError("Invalid UPI ID.")
+                if len(value) > (700 if key == "info_text" else 250):
+                    raise ValueError("Setting text is too long.")
+            with database(True) as con:
+                for key, value in values.items():
+                    con.execute(
+                        "INSERT INTO settings VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value",
+                        (key, str(value))
+                    )
+        elif mode == "ban":
+            action, target_s = text.split()
+            target = int(target_s)
+            if target in ADMIN_IDS or action not in ("ban", "unban"):
+                raise ValueError("Invalid target or action. Admin accounts cannot be banned here.")
+            ensure_user(target)
+            execute("UPDATE users SET banned=? WHERE id=?", (int(action == "ban"), target))
+            users[target]["rejected"] = action == "ban"
+            users[target]["approved"] = action == "unban"
+            save_data()
+            enforce_limit(target)
+        elif mode == "broadcast":
+            audience, body = text.split("\n", 1)
+            if audience not in ("all", "subscribers", "expired") or len(body) > 3500:
+                raise ValueError("First line must be all, subscribers or expired. Message limit: 3500 characters.")
+            set_state(uid, "broadcast_confirm", audience=audience, body=body)
+            say(
+                uid,
+                (
+                    f"{pe(PE_ADMIN, '📢')} <b>Confirm broadcast to {safe_html(audience)}?</b>\n\n"
+                    f"{safe_html(body)}"
+                ),
+                keyboard(("✅ SEND", "s:bcsend"), back="s:manager")
+            )
+            return
+    clear_state(uid)
+    say(uid, f"{pe(PE_CHECK, '✅')} <b>Saved successfully.</b>", keyboard(back="s:manager"))
+
+
+def targeted_broadcast(uid, audience, body):
+    query = "SELECT id FROM users WHERE banned=0"
+    args = ()
+    if audience == "subscribers":
+        query += " AND plan IS NOT NULL AND plan_expiry>?"
+        args = (time.time(),)
+    elif audience == "expired":
+        query += " AND plan_expiry>0 AND plan_expiry<=?"
+        args = (time.time(),)
+    sent, failed = 0, 0
+    for r in rows(query, args):
+        try:
+            say(r["id"], f"{pe(PE_ADMIN, '📢')} <b>ANNOUNCEMENT</b>\n\n{safe_html(body)}")
+            sent += 1
+        except Exception:
+            failed += 1
+        if STOP_EVENT.wait(0.05):
+            break
+    notify(
+        uid,
+        (
+            f"{pe(PE_CHECK, '✅')} <b>Broadcast Finished</b>\n\n"
+            f"{pe(PE_USER, '📨')} <b>Sent:</b> {sent}\n"
+            f"{pe(PE_CROSS, '❌')} <b>Failed:</b> {failed}"
+        )
+    )
+
+
+def subscription_callback(call):
+    uid = call.from_user.id
+    bits = call.data.split(":")
+    action = bits[1]
+    arg = bits[2] if len(bits) > 2 else ""
+
+    owner_actions = {
+        "manager", "settings", "manageplans", "editplan", "addplan",
+        "toggleplan", "deleteplan", "confirmdeleteplan", "gift", "ban",
+        "banlist", "broadcast", "bcsend", "revenue", "backup", "upi",
+        "upi_set", "upi_remove", "upi_clear", "planjson", "plan_price",
+        "plan_days", "plan_save", "plan_edit_again", "plan_defaults",
+        "gift_give", "gift_remove", "gd", "gconfirm", "gremove"
+    }
+    if action in owner_actions and uid != OWNER_ID:
+        raise ValueError("Owner access required.")
+    if action in ("approve", "reject", "review", "orders", "replyticket") and uid not in ADMIN_IDS:
+        raise ValueError("Admin access required.")
+    if action in ("home", "info", "plans", "manager", "manageplans"):
+        clear_state(uid)
+    if action in ("plans", "plan", "pay") and is_premium(uid):
+        raise ValueError("You already have an active Premium plan!")
+
+    if action == "home":
+        say(
+            uid,
+            f"{pe(PE_ROCKET, '🏠')} <b>MAIN MENU</b>\nChoose an option from the keyboard below.",
+            control_buttons(uid)
+        )
+    elif action == "info":
+        if setting("subscription_on") != "1":
+            raise ValueError("Subscriptions are temporarily disabled.")
+        show_subscription(uid, call)
+    elif action == "plans":
+        if setting("subscription_on") != "1":
+            raise ValueError("Subscriptions are temporarily disabled.")
+        select_plan(call)
+    elif action == "mine":
+        o = pending_order(uid)
+        buttons = [] if is_premium(uid) else [("💎 Upgrade Plan", "s:info")]
+        if o:
+            if o["stage"] != "review":
+                buttons.append(("📤 Resume Payment", f"s:paid:{o['id']}"))
+            buttons.append(("❌ Cancel Pending Order", f"s:cancel:{o['id']}"))
+        screen(call, my_subscription(uid), keyboard(*buttons))
+    elif action == "plan":
+        p = rows("SELECT * FROM plans WHERE id=? AND active=1", (int(arg),))
+        if not p:
+            raise ValueError("Plan unavailable.")
+        p = p[0]
+        screen(
+            call,
+            (
+                f"{pe(PE_DIAMOND, '💎')} <b>CONFIRM YOUR PLAN</b>\n\n"
+                f"{pe(PE_CROWN, '👑')} <b>{safe_html(p['name'])}</b>\n"
+                f"• {pe(PE_MONEY, '💰')} <b>Price:</b> ₹{money(p['price'])}\n"
+                f"• {pe(PE_WARNING, '⏳')} <b>Validity:</b> {p['duration_days']} days\n"
+                f"• {pe(PE_FOLDER, '📁')} <b>Files:</b> {p['bot_limit']}  •  <b>Upload:</b> {min(50, p['max_upload_mb'])} MB\n"
+                f"  <i>{safe_html(p['description'])}</i>\n\n"
+                f"{pe(PE_STAR, '⭐')} Proceed to UPI QR payment?"
+            ),
+            keyboard(("✅ Yes, Continue", f"s:pay:{arg}"), ("❌ Cancel", "s:home"), back="s:plans")
+        )
+    elif action == "pay":
+        qr_payment(call, int(arg))
+    elif action == "paid":
+        o = get_order(arg, uid)
+        if o["status"] != "pending" or o["stage"] == "review":
+            raise ValueError("Order expired, closed, or already awaiting review.")
+        if o["stage"] == "qr":
+            execute("UPDATE orders SET stage='utr' WHERE id=? AND status='pending' AND stage='qr'", (arg,))
+        o = get_order(arg, uid)
+        prompt_msg = (
+            f"{pe(PE_UPLOAD, '📸')} <b>SEND PAYMENT SCREENSHOT</b>\n\n"
+            f"Send your payment screenshot as a photo or image document.\n"
+            f"Make sure the amount and UTR are clearly visible."
+            if o["stage"] == "screenshot"
+            else (
+                f"{pe(PE_LOCK, '🔑')} <b>SEND YOUR UTR / TRANSACTION ID</b>\n\n"
+                f"Enter the 12 to 22 character UTR / Transaction ID from your UPI app.\n\n"
+                f"Example: <code>412345678901</code>"
+            )
+        )
+        say(uid, prompt_msg, keyboard(("❌ Cancel", f"s:cancel:{arg}"), back="s:mine"))
+    elif action == "cancel":
+        with database(True) as con:
+            cur = con.execute(
+                "UPDATE orders SET status='cancelled' WHERE id=? AND user_id=? AND status='pending'",
+                (arg, uid)
+            )
+            if not cur.rowcount:
+                raise ValueError("Order is already closed.")
+        clear_state(uid)
+        screen(
+            call,
+            (
+                f"{pe(PE_CROSS, '🚫')} <b>ORDER CANCELLED</b>\n\n"
+                f"If you already completed a payment, contact Support with your UTR."
+            ),
+            keyboard(back="s:info")
+        )
+    elif action == "approve":
+        process_order(arg, uid, True, "Bank credit manually verified")
+    elif action == "reject":
+        o = get_order(arg)
+        if o["status"] != "pending" or o["stage"] != "review":
+            raise ValueError("Order is no longer awaiting review.")
+        set_state(uid, "reject", oid=arg)
+        say(uid, "Send a rejection reason, or /skip for 'Not verified'.", keyboard(back="s:home"))
+    elif action == "orders":
+        if arg not in ("pending", "approved", "rejected", "expired", "cancelled"):
+            raise ValueError("Invalid order filter.")
+        orders = rows("SELECT * FROM orders WHERE status=? ORDER BY created_at DESC LIMIT 30", (arg,))
+        body = "\n".join(
+            f"• <code>{o['id']}</code> | User <code>{o['user_id']}</code> | ₹{money(o['amount'])} | {o['stage']}"
+            for o in orders
+        ) or "<i>No orders found.</i>"
+        text = f"{pe(PE_DIAMOND, '📋')} <b>{arg.upper()} ORDERS</b>\n\n{body}"
+        buttons = [
+            (f"🔎 Review {o['id']}", f"s:review:{o['id']}")
+            for o in orders if o["stage"] == "review" and o["status"] == "pending"
+        ]
+        screen(call, text, keyboard(*buttons, back="s:manager" if uid == OWNER_ID else "s:home"))
+    elif action == "review":
+        send_review(arg)
+    elif action == "manager":
+        manager(call)
+    elif action == "settings":
+        values = {
+            r["key"]: r["value"]
+            for r in rows("SELECT * FROM settings WHERE key NOT IN ('legacy_imported','default_plans_seeded')")
+        }
+        set_state(uid, "settings")
+        screen(
+            call,
+            (
+                f"{pe(PE_SETTINGS, '⚙️')} <b>SERVICE SETTINGS</b>\n\n"
+                f"Send a JSON object with any keys you want to update:\n"
+                f"<pre>{safe_html(json.dumps(values, ensure_ascii=False, indent=2))}</pre>"
+            ),
+            keyboard(back="s:manager")
+        )
+    elif action == "upi":
+        clear_state(uid)
+        current = setting("upi_id")
+        shown = f"<code>{safe_html(current)}</code>" if current else "<i>Not set yet</i>"
+        screen(
+            call,
+            f"{pe(PE_MONEY, '💳')} <b>UPI ID SETTINGS</b>\n\nCurrent UPI ID: {shown}",
+            keyboard(("✏️ Change UPI ID", "s:upi_set"), ("🗑 Remove UPI ID", "s:upi_remove"), back="s:manager")
+        )
+    elif action == "upi_set":
+        set_state(uid, "upi")
+        screen(
+            call,
+            (
+                f"{pe(PE_MONEY, '💳')} <b>SET UPI ID</b>\n\n"
+                f"Please send your UPI ID (example: <code>yourname@upi</code>).\n"
+                f"Send /cancel to cancel."
+            ),
+            keyboard(("❌ Cancel", "s:upi"), back=None)
+        )
+    elif action == "upi_remove":
+        screen(
+            call,
+            f"{pe(PE_WARNING, '⚠️')} <b>Remove UPI ID?</b>\nUsers will not be able to pay until a new UPI ID is set.",
+            keyboard(("🗑 Yes, Remove", "s:upi_clear"), ("❌ Cancel", "s:upi"), back=None)
+        )
+    elif action == "upi_clear":
+        set_setting("upi_id", "")
+        screen(call, f"{pe(PE_CHECK, '✅')} <b>UPI ID removed.</b>", keyboard(back="s:upi"))
+    elif action == "manageplans":
+        clear_state(uid)
+        plans = rows("SELECT * FROM plans ORDER BY price,id LIMIT 40")
+        lines = [
+            f"{'🟢' if p['active'] else '🔴'} <b>{safe_html(p['name'])}</b> — ₹{money(p['price'])} / {p['duration_days']}d ({p['bot_limit']} files)"
+            for p in plans
+        ]
+        text = f"{pe(PE_DIAMOND, '💎')} <b>MANAGE PLANS</b>\n\n" + ("\n".join(lines) if lines else "No plans yet.")
+        items = [("➕ Add Plan", "s:addplan"), ("♻️ Restore Defaults", "s:plan_defaults")]
+        items += [(f"✏️ {p['name'][:22]}", f"s:editplan:{p['id']}") for p in plans]
+        screen(call, text, keyboard(*items, back="s:manager"))
+    elif action == "plan_defaults":
+        added = 0
+        for name, price, days, limit, desc, emoji in DEFAULT_PLANS:
+            if not rows("SELECT 1 FROM plans WHERE name=? AND price=? AND duration_days=?", (name, price, days)):
+                execute(
+                    "INSERT INTO plans(name,price,duration_days,bot_limit,description,emoji,active,max_upload_mb) "
+                    "VALUES (?,?,?,?,?,?,1,20)",
+                    (name, price, days, limit, desc, emoji)
+                )
+                added += 1
+        screen(call, f"{pe(PE_CHECK, '✅')} <b>Default plans restored.</b> Added: {added}.", keyboard(back="s:manageplans"))
+    elif action == "addplan":
+        set_state(uid, "np_name")
+        screen(
+            call,
+            f"{pe(PE_DIAMOND, '💎')} <b>Enter Plan Name</b>\n\nExample: <code>Premium Weekly</code>\nSend /cancel to cancel.",
+            keyboard(("❌ Cancel", "s:manageplans"), back=None)
+        )
+    elif action == "plan_edit_again":
+        set_state(uid, "np_name")
+        screen(call, "✏️ <b>Enter Plan Name</b>\n\nSend /cancel to cancel.", keyboard(("❌ Cancel", "s:manageplans"), back=None))
+    elif action == "plan_save":
+        state = UI_STATE.get(uid, {})
+        if state.get("mode") != "plan_confirm":
+            raise ValueError("No plan is waiting to be saved.")
+        if rows("SELECT COUNT(*) n FROM plans WHERE active=1")[0]["n"] >= 10:
+            raise ValueError("Keep at most 10 active plans.")
+        p = state["plan"]
+        execute(
+            "INSERT INTO plans(name,price,duration_days,bot_limit,description,emoji,active,max_upload_mb) "
+            "VALUES (?,?,?,5,?,?,1,20)",
+            (p["name"], p["price"], p["days"], f"{p['days']} days of premium hosting", "💎")
+        )
+        clear_state(uid)
+        screen(call, f"{pe(PE_CHECK, '✅')} <b>Plan saved!</b>", keyboard(back="s:manageplans"))
+    elif action == "editplan":
+        clear_state(uid)
+        p = plan_row(int(arg))
+        screen(
+            call,
+            (
+                f"{pe(PE_DIAMOND, '✏️')} <b>{safe_html(p['name'])}</b>\n\n"
+                f"• <b>Price:</b> ₹{money(p['price'])}\n"
+                f"• <b>Duration:</b> {p['duration_days']} days\n"
+                f"• <b>File Limit:</b> {p['bot_limit']} files\n"
+                f"• <b>Status:</b> {'Enabled' if p['active'] else 'Disabled'}"
+            ),
+            keyboard(
+                ("💰 Change Price", f"s:plan_price:{arg}"),
+                ("⏳ Change Duration", f"s:plan_days:{arg}"),
+                ("🔄 Enable / Disable", f"s:toggleplan:{arg}"),
+                ("🗑 Delete", f"s:deleteplan:{arg}"),
+                ("⚙️ Advanced JSON", f"s:planjson:{arg}"),
+                back="s:manageplans"
+            )
+        )
+    elif action == "planjson":
+        plan_form(call, int(arg))
+    elif action in ("plan_price", "plan_days"):
+        plan_row(int(arg))
+        set_state(uid, "ep_" + action[5:], pid=int(arg))
+        prompt = (
+            f"{pe(PE_MONEY, '💰')} <b>Enter the new price in INR</b>\nExample: <code>49</code>"
+            if action == "plan_price"
+            else f"{pe(PE_WARNING, '⏳')} <b>Enter the new duration in days</b>\nExample: <code>7</code>"
+        )
+        screen(call, prompt + "\n\nSend /cancel to cancel.", keyboard(("❌ Cancel", f"s:editplan:{arg}"), back=None))
+    elif action == "toggleplan":
+        execute("UPDATE plans SET active=1-active WHERE id=?", (int(arg),))
+        screen(call, f"{pe(PE_CHECK, '✅')} <b>Plan availability toggled.</b>", keyboard(back="s:manageplans"))
+    elif action == "deleteplan":
+        screen(
+            call,
+            f"{pe(PE_WARNING, '⚠️')} <b>Delete this plan?</b>\nExisting subscribers keep their active time.",
+            keyboard(("🗑 Confirm Delete", f"s:confirmdeleteplan:{arg}"), ("❌ Cancel", f"s:editplan:{arg}"), back=None)
+        )
+    elif action == "confirmdeleteplan":
+        execute("DELETE FROM plans WHERE id=?", (int(arg),))
+        screen(call, f"{pe(PE_CHECK, '✅')} <b>Plan deleted.</b>", keyboard(back="s:manageplans"))
+    elif action == "gift":
+        clear_state(uid)
+        screen(
+            call,
+            f"{pe(PE_GIFT, '🎁')} <b>GIVE / REMOVE SUBSCRIPTION</b>",
+            keyboard(("🎁 Give Subscription", "s:gift_give"), ("➖ Remove Subscription", "s:gift_remove"), back="s:manager")
+        )
+    elif action in ("gift_give", "gift_remove"):
+        set_state(uid, "give_uid" if action == "gift_give" else "rem_uid")
+        screen(
+            call,
+            f"{pe(PE_USER, '👤')} <b>Send the Telegram User ID.</b>\n\nSend /cancel to cancel.",
+            keyboard(("❌ Cancel", "s:gift"), back=None)
+        )
+    elif action == "gd":
+        state = UI_STATE.get(uid, {})
+        if state.get("mode") != "give_pick":
+            raise ValueError("Start again from Give Subscription.")
+        if arg == "c":
+            set_state(uid, "give_days", target=state["target"])
+            screen(
+                call,
+                f"{pe(PE_WARNING, '⏳')} <b>Enter the number of days.</b>\nExample: <code>15</code>",
+                keyboard(("❌ Cancel", "s:gift"), back=None)
+            )
+        else:
+            if arg not in ("7", "30", "90"):
+                raise ValueError("Invalid duration.")
+            give_confirm(uid, state["target"], int(arg))
+    elif action == "gconfirm":
+        state = UI_STATE.get(uid, {})
+        if state.get("mode") != "give_confirm":
+            raise ValueError("Nothing to confirm.")
+        target, days = state["target"], state["days"]
+        clear_state(uid)
+        u = premium_user(target)
+        now = time.time()
+        active = bool(u["plan"]) and u["plan_expiry"] > now
+        caps = rows("SELECT COALESCE(MAX(bot_limit),5) b, COALESCE(MAX(max_upload_mb),20) m FROM plans")[0]
+        expiry = max(now, u["plan_expiry"]) + days * 86400
+        execute(
+            "UPDATE users SET plan=?,plan_expiry=?,bot_limit=MAX(bot_limit,?),max_upload_mb=MAX(max_upload_mb,?),reminded=0 WHERE id=?",
+            (u["plan"] if active else "Gifted", expiry, caps["b"], caps["m"], target)
+        )
+        ensure_user(target)
+        users[target]["approved"] = True
+        users[target]["rejected"] = False
+        users[target]["max_files"] = max(int(caps["b"]), int(users[target].get("max_files", 2)))
+        save_data()
+        notify_menu(
+            target,
+            (
+                f"{pe(PE_GIFT, '🎁')} <b>YOU RECEIVED PREMIUM!</b>\n\n"
+                f"{pe(PE_CROWN, '👑')} You now have <b>Premium Access</b>!\n"
+                f"{pe(PE_CHECK, '✅')} <b>Added:</b> {days} days\n"
+                f"{pe(PE_WARNING, '⏳')} <b>Expires:</b> {stamp(expiry)}"
+            )
+        )
+        screen(
+            call,
+            (
+                f"{pe(PE_CHECK, '✅')} <b>Subscription Given</b>\n\n"
+                f"User: <code>{target}</code>\n"
+                f"Days: {days}\n"
+                f"Expires: {stamp(expiry)}"
+            ),
+            keyboard(back="s:gift")
+        )
+    elif action == "gremove":
+        state = UI_STATE.get(uid, {})
+        if state.get("mode") != "rem_confirm":
+            raise ValueError("Nothing to confirm.")
+        target = state["target"]
+        clear_state(uid)
+        execute("UPDATE users SET plan=NULL,plan_expiry=0,reminded=0 WHERE id=?", (target,))
+        if target in users:
+            users[target]["max_files"] = int(setting("free_limit", "2"))
+            save_data()
+        enforce_limit(target)
+        notify_menu(
+            target,
+            (
+                f"{pe(PE_WARNING, 'ℹ️')} <b>PREMIUM ENDED</b>\n\n"
+                f"Your subscription was removed by the owner.\n"
+                f"Free plan limits now apply; your files were kept."
+            )
+        )
+        screen(call, f"{pe(PE_CHECK, '✅')} <b>Subscription removed for</b> <code>{target}</code>.", keyboard(back="s:gift"))
+    elif action == "ban":
+        set_state(uid, "ban")
+        screen(call, "Send <code>ban USER_ID</code> or <code>unban USER_ID</code>.", keyboard(back="s:manager"))
+    elif action == "banlist":
+        result = rows("SELECT id FROM users WHERE banned=1 LIMIT 100")
+        body = "\n".join(f"• <code>{r['id']}</code>" for r in result) or "<i>No banned users.</i>"
+        screen(call, f"{pe(PE_CROSS, '🚫')} <b>BANNED ACCOUNTS</b>\n\n{body}", keyboard(back="s:manager"))
+    elif action == "broadcast":
+        set_state(uid, "broadcast")
+        screen(
+            call,
+            (
+                f"{pe(PE_ADMIN, '📢')} <b>TARGETED BROADCAST</b>\n\n"
+                f"First line: <code>all</code>, <code>subscribers</code>, or <code>expired</code>\n"
+                f"Following lines: your message."
+            ),
+            keyboard(back="s:manager")
+        )
+    elif action == "bcsend":
+        state = UI_STATE.get(uid, {})
+        if state.get("mode") != "broadcast_confirm":
+            raise ValueError("No broadcast to send.")
+        clear_state(uid)
+        threading.Thread(
+            target=targeted_broadcast,
+            args=(uid, state["audience"], state["body"]),
+            daemon=True
+        ).start()
+        screen(call, f"{pe(PE_ROCKET, '📢')} <b>Broadcast started...</b>", keyboard(back="s:manager"))
+    elif action == "revenue":
+        screen(call, revenue_text(), keyboard(back="s:manager"))
+    elif action == "backup":
+        backup_database(send=True)
+    elif action == "replyticket":
+        set_state(uid, "ticket_reply", ticket=int(arg))
+        say(uid, "Send your support reply message:", keyboard(back="s:home"))
+    elif action == "support":
+        set_state(uid, "ticket")
+        screen(
+            call,
+            f"{pe(PE_PHONE, '🆘')} <b>SUPPORT</b>\n\nSend your message (up to 3500 characters).",
+            keyboard()
+        )
+    else:
+        raise ValueError("Unknown action.")
+
+
+# ============================================================
+# DELEGATING HANDLERS (PRESERVING 100% OF ORIGINAL UI & FLOWS)
+# ============================================================
+
+_old_start = start_command
+_old_text = control_handler
+_old_doc = document_handler
+_old_callback = callback_query
+
+
+def check_access(obj, callback=False):
+    uid = obj.from_user.id
+    message = obj.message if callback else obj
+    if not message:
+        return
+    ensure_user(uid)
+    with STATE_LOCK:
+        users[uid]["username"] = "@" + obj.from_user.username if obj.from_user.username else "Not supplied"
+        users[uid]["name"] = obj.from_user.first_name or "User"
+    u = premium_user(uid)
+    if uid not in ADMIN_IDS and (u["banned"] or users[uid].get("rejected")):
+        raise ValueError("Your account is restricted. Contact support.")
+    now = time.time()
+    with UI_LOCK:
+        queue = RATE[uid]
+        while queue and queue[0] < now - 60:
+            queue.popleft()
+        if len(queue) >= RATE_LIMIT and uid not in ADMIN_IDS:
+            raise ValueError("Too many requests. Please wait a moment.")
+        queue.append(now)
+    execute("UPDATE users SET last_seen=? WHERE id=?", (now, uid))
+    channel = setting("force_join")
+    if channel and uid not in ADMIN_IDS:
+        membership = telegram(bot.get_chat_member, channel, uid)
+        if membership.status not in ("creator", "administrator", "member") and not getattr(membership, "is_member", False):
+            raise ValueError(f"Please join {channel} before using this bot.")
+
+
+def guarded(fn, callback=False):
+    @functools.wraps(fn)
+    def wrapper(obj):
+        try:
+            check_access(obj, callback)
+            return fn(obj)
+        except (ValueError, KeyError, TypeError, json.JSONDecodeError, sqlite3.IntegrityError) as exc:
+            msg = str(exc)[:1500] or "Invalid input. Please try again."
+            if callback:
+                try:
+                    bot.answer_callback_query(obj.id, f"⚠️ {msg[:180]}")
+                except Exception:
+                    pass
+            notify(obj.from_user.id, f"{pe(PE_WARNING, '⚠️')} <b>{safe_html(msg)}</b>")
+        except Exception:
+            LOG.exception("Handler failed")
+            notify(
+                obj.from_user.id,
+                f"{pe(PE_CROSS, '❌')} <b>Something went wrong. Please try again.</b>"
+            )
+    return wrapper
+
+
+@guarded
+def premium_start(message):
+    clear_state(message.from_user.id)
+    return _old_start(message)
+
+
+def receive_proof(message, o):
+    uid = message.from_user.id
+    if o["stage"] == "utr":
+        if not message.text:
+            raise ValueError("Send the UTR as text before sending the screenshot.")
+        receive_utr(uid, message.text, o["id"])
+        say(
+            uid,
+            (
+                f"{pe(PE_CHECK, '✅')} <b>UTR SAVED</b>\n\n"
+                f"{pe(PE_UPLOAD, '📸')} Now send your <b>payment screenshot</b> as a photo or image document."
+            ),
+            keyboard(("❌ Cancel", f"s:cancel:{o['id']}"), back="s:mine")
+        )
+        return
+    photo = getattr(message, "photo", None)
+    doc = getattr(message, "document", None)
+    if photo:
+        file_id, kind = photo[-1].file_id, "photo"
+    elif doc and (doc.mime_type or "").lower() in ("image/jpeg", "image/png", "image/webp") and (doc.file_size or 0) <= 10 * 1024 ** 2:
+        from PIL import Image
+        info = telegram(bot.get_file, doc.file_id)
+        raw = telegram(bot.download_file, info.file_path)
+        if len(raw) > 10 * 1024 ** 2:
+            raise ValueError("Screenshot is too large.")
+        with Image.open(BytesIO(raw)) as image:
+            image.verify()
+        file_id, kind = doc.file_id, "document"
+    else:
+        raise ValueError("Send a screenshot as a photo or PNG/JPEG/WebP image document.")
+    with database(True) as con:
+        cur = con.execute(
+            "UPDATE orders SET screenshot_file_id=?,screenshot_kind=?,stage='review' "
+            "WHERE id=? AND user_id=? AND status='pending' AND stage='screenshot' AND expires_at>?",
+            (file_id, kind, o["id"], uid, time.time())
+        )
+        if cur.rowcount != 1:
+            raise ValueError("This order has expired or proof was already received.")
+    say(
+        uid,
+        (
+            f"{pe(PE_CHECK, '✅')} <b>PAYMENT PROOF RECEIVED</b>\n\n"
+            f"{pe(PE_PHONE, '🧾')} <b>Order ID:</b> <code>{o['id']}</code>\n"
+            f"{pe(PE_WARNING, '⏳')} Please wait 5 to 10 minutes for owner verification."
+        )
+    )
+    send_review(o["id"])
+
+
+@guarded
+def premium_text(message):
+    uid = message.from_user.id
+    text = (message.text or "").strip()
+
+    if is_menu_button(text):
+        with UI_LOCK:
+            UI_STATE.pop(uid, None)
+
+    if text == "/cancel":
+        o = pending_order(uid)
+        if o:
+            execute("UPDATE orders SET status='cancelled' WHERE id=? AND status='pending'", (o["id"],))
+        clear_state(uid)
+        say(uid, f"{pe(PE_CHECK, '✅')} <b>Cancelled.</b>", control_buttons(uid))
+        return
+
+    if text in ("💎 Subscription", "📊 My Subscription", "🆘 Support", "👑 Premium Active"):
+        if approval_required(message):
+            return
+        clear_state(uid)
+        if text.startswith("💎") and setting("subscription_on") != "1" and not is_premium(uid):
+            raise ValueError("Subscriptions are temporarily disabled.")
+        if text.startswith(("💎", "👑")):
+            show_subscription(uid)
+        elif text.startswith("📊"):
+            o = pending_order(uid)
+            btns = [] if is_premium(uid) else [("💎 Upgrade Plan", "s:info")]
+            if o:
+                btns.append(("📤 Pending Payment", "s:mine"))
+            say(uid, my_subscription(uid), keyboard(*btns))
+        else:
+            set_state(uid, "ticket")
+            say(
+                uid,
+                (
+                    f"{pe(PE_PHONE, '🆘')} <b>SUPPORT</b>\n\n"
+                    f"{pe(PE_STAR, '✍️')} Send your message below and the owner will reply soon."
+                ),
+                keyboard()
+            )
+        return
+
+    state = UI_STATE.get(uid)
+    if state and state["at"] < time.time() - 1800:
+        with UI_LOCK:
+            UI_STATE.pop(uid, None)
+        state = None
+
+    if state:
+        mode = state["mode"]
+        if mode == "ticket":
+            if not text or len(text) > 3500:
+                raise ValueError("Use 1 to 3500 characters.")
+            tid = execute(
+                "INSERT INTO tickets(user_id,message,created_at) VALUES (?,?,?)",
+                (uid, text, time.time())
+            )
+            for admin in ADMIN_IDS:
+                notify(
+                    admin,
+                    (
+                        f"{pe(PE_PHONE, '🆘')} <b>SUPPORT TICKET #{tid}</b>\n"
+                        f"{pe(PE_USER, '👤')} <b>From:</b> <code>{uid}</code>\n\n"
+                        f"{safe_html(text)}"
+                    ),
+                    keyboard(("↩️ Reply", f"s:replyticket:{tid}"), back=None)
+                )
+            clear_state(uid)
+            say(uid, f"{pe(PE_CHECK, '✅')} <b>Support ticket submitted!</b>")
+        else:
+            handle_admin_input(message, state)
+        return
+
+    o = pending_order(uid)
+    if o and o["stage"] in ("utr", "screenshot") and not is_menu_button(text):
+        receive_proof(message, o)
+        return
+
+    if text == "/admin" and uid in ADMIN_IDS:
+        send_admin_panel(message.chat.id)
+        return
+
+    # Delegate everything else (Upload, My Files, Restart, Stop, Speed, Status, Recommended Install, Owner Panel, .env inputs) to the original handler!
+    return _old_text(message)
+
+
+@guarded
+def premium_document(message):
+    uid = message.from_user.id
+    o = pending_order(uid)
+    if o and o["stage"] in ("utr", "screenshot"):
+        receive_proof(message, o)
+        return
+    if setting("maintenance") == "1" and uid != OWNER_ID:
+        raise ValueError(setting("maintenance_text"))
+    doc = message.document
+    if (doc.file_size or 0) > upload_limit(uid) and uid != OWNER_ID:
+        raise ValueError(f"File exceeds your plan upload limit of {upload_limit(uid) // 1024 ** 2} MB.")
+    # Use the original clean document_handler (saves directly in user_folder, shows Configure .env / Skip & Run)
+    return _old_doc(message)
+
+
+@guarded
+def premium_photo(message):
+    o = pending_order(message.from_user.id)
+    if not o or o["stage"] not in ("utr", "screenshot"):
+        return
+    receive_proof(message, o)
+
+
+def premium_callback_body(call):
+    if (call.data or "").startswith("s:"):
+        try:
+            bot.answer_callback_query(call.id)
+        except Exception:
+            pass
+        return subscription_callback(call)
+
+    uid = call.from_user.id
+    result = _old_callback(call)
+    if (call.data or "").startswith(("owner_ban_", "owner_appr_", "approve_", "reject_")) and uid == OWNER_ID:
+        for target, value in list(users.items()):
+            execute("UPDATE users SET banned=? WHERE id=?", (int(value.get("rejected", False)), target))
+            if value.get("rejected"):
+                enforce_limit(target)
+    return result
+
+
+premium_callback = guarded(premium_callback_body, callback=True)
+
+bot.message_handlers.clear()
+bot.callback_query_handlers.clear()
+bot.register_message_handler(premium_start, commands=["start"])
+bot.register_message_handler(premium_text, content_types=["text"], func=lambda m: True)
+bot.register_message_handler(premium_document, content_types=["document"])
+bot.register_message_handler(premium_photo, content_types=["photo"])
+bot.register_callback_query_handler(premium_callback, func=lambda c: True)
+
+
+def maintenance_tick():
+    now = time.time()
+    execute(
+        "UPDATE orders SET status='expired',reason='Proof deadline elapsed' "
+        "WHERE status='pending' AND stage!='review' AND expires_at<=?",
+        (now,)
+    )
+    for u in rows("SELECT * FROM users WHERE plan IS NOT NULL"):
+        if u["plan_expiry"] <= now:
+            execute("UPDATE users SET plan=NULL,reminded=0 WHERE id=? AND plan_expiry<=?", (u["id"], now))
+            if u["id"] in users:
+                users[u["id"]]["max_files"] = int(setting("free_limit", "2"))
+                save_data()
+            enforce_limit(u["id"])
+            notify_menu(
+                u["id"],
+                (
+                    f"{pe(PE_WARNING, '⌛')} <b>PREMIUM EXPIRED</b>\n\n"
+                    f"Free plan limits now apply; your files were kept.\n"
+                    f"Tap <b>💎 Subscription</b> anytime to renew."
+                )
+            )
+        elif u["plan_expiry"] - now <= 86400 and not u["reminded"]:
+            notify(
+                u["id"],
+                (
+                    f"{pe(PE_WARNING, '⏰')} <b>SUBSCRIPTION REMINDER</b>\n\n"
+                    f"Your Premium plan expires at <b>{stamp(u['plan_expiry'])}</b>.\n"
+                    f"Use <b>💎 Subscription</b> to renew."
+                )
+            )
+            execute("UPDATE users SET reminded=1 WHERE id=?", (u["id"],))
+    with UI_LOCK:
+        for uid, state in list(UI_STATE.items()):
+            if state["at"] < now - 1800:
+                UI_STATE.pop(uid, None)
+        for uid, q in list(RATE.items()):
+            if not q or q[-1] < now - 600:
+                RATE.pop(uid, None)
+
+
+def background_loop():
+    last_backup = setting("last_backup_day", "")
+    while not STOP_EVENT.is_set():
+        try:
+            maintenance_tick()
+            day = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+            if day != last_backup:
+                backup_database(send=False)
+                set_setting("last_backup_day", day)
+                last_backup = day
+        except Exception:
+            LOG.exception("Background maintenance failed")
+        STOP_EVENT.wait(60)
+
+
+class PremiumExceptionHandler(telebot.ExceptionHandler):
+    def handle(self, exception):
+        LOG.error("Telegram worker error", exc_info=(type(exception), exception, exception.__traceback__))
+        return True
+
+
+bot.exception_handler = PremiumExceptionHandler()
+
+
+def shutdown(signum=None, frame=None):
+    if STOP_EVENT.is_set():
+        return
+    STOP_EVENT.set()
+    try:
+        bot.stop_polling()
+    except Exception:
+        pass
+    save_data()
+
+
+# ============================================================
+# BOT START
+# ============================================================
+
 if __name__ == "__main__":
 
-    print(
-        "=================================================="
-    )
-
-    print(
-        "🔧 DK HOSTING BOT"
-    )
-
-    print(
-        "=================================================="
-    )
+    print("==================================================")
+    print("🔧 DK HOSTING BOT")
+    print("==================================================")
 
     if not BOT_TOKEN:
-
-        print(
-            "❌ BOT_TOKEN is not configured!"
-        )
-
-        print(
-            "Set BOT_TOKEN in Render Environment Variables."
-        )
-
+        print("❌ BOT_TOKEN is not configured!")
+        print("Set BOT_TOKEN in Render Environment Variables.")
         sys.exit(1)
+
+    signal.signal(signal.SIGINT, shutdown)
+    signal.signal(signal.SIGTERM, shutdown)
 
     start_keepalive_server()
 
     restore_all()
 
-    print(
-        "DK HOSTING BOT IS RUNNING 🏃"
-    )
+    threading.Thread(target=background_loop, daemon=True).start()
 
-    bot.infinity_polling(
-        skip_pending=True,
-        timeout=60,
-        long_polling_timeout=60
-    )
+    print("DK HOSTING BOT IS RUNNING 🏃")
+
+    delay = 2
+    try:
+        while not STOP_EVENT.is_set():
+            started = time.monotonic()
+            try:
+                bot.infinity_polling(
+                    skip_pending=True,
+                    timeout=60,
+                    long_polling_timeout=60
+                )
+            except Exception:
+                LOG.exception("Polling stopped unexpectedly, restarting...")
+            if STOP_EVENT.is_set():
+                break
+            delay = 2 if time.monotonic() - started > 300 else min(60, delay * 2)
+            STOP_EVENT.wait(delay)
+    finally:
+        shutdown()
